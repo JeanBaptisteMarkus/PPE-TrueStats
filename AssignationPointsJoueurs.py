@@ -6,6 +6,7 @@ import csv
 from matplotlib.lines import Line2D
 from matplotlib.patches import Arc
 
+
 LONGUEUR_TERRAIN = 14.325
 LARGEUR_TERRAIN = 15.24
 
@@ -17,6 +18,7 @@ prefix_equipe = {
     "DallasMavericks": "DAL",
     "LosAngelesLakers": "LAL",
 }
+
 
 class Joueur:
     def __init__(self, joueur_id, nom, prenom, taille, stat_rebond, equipe):
@@ -80,6 +82,23 @@ class SituationBasket:
             self.equipe_B[idx] = nouveau_joueur
 
         nouveau_joueur.position = joueur_a_remplacer.position
+
+    #Fonction pour ajouter la ligne correspondante à la situation de rebond (avec stats du rebondeur etc) dans le csv
+    def enregistrer_situation(self):
+        data = []
+        data.append({
+            "id": self.rebondeur.id,
+            "surname": self.rebondeur.nom,
+            "name": self.rebondeur.prenom,
+            "height": self.rebondeur.taille,
+            "reb_avg": self.rebondeur.stat_rebond
+        })
+
+        df = pd.DataFrame(data)
+        #Ajouter au csv
+        df.to_csv("situations.csv", mode="a", header=False, index=False)
+
+
 
 class InterfaceBasket:
     def __init__(self, equipe1, equipe2):
@@ -163,6 +182,7 @@ class InterfaceBasket:
                 dist = np.hypot(x - x_click, y - y_click)
                 if dist < 0.7:
                     self.selected_joueur = joueur
+                    self.situation.rebondeur = joueur
                     self.dragging = True
                     print(f"{joueur.prenom} {joueur.nom} sélectionné sur le terrain.")
                     self.draw_players()
@@ -215,7 +235,6 @@ class InterfaceBasket:
         else:
             print("Enregistrement de la situation...")
             self.situation.enregistrer_situation()
-            self.situation.afficher_dataframe()
 
 def dessiner_terrain(ax):
     ax.plot([0, LONGUEUR_TERRAIN, LONGUEUR_TERRAIN, 0, 0],
