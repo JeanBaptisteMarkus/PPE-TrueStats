@@ -1,13 +1,15 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import tkinter as tk
+from tkinter import ttk
 import random
 import csv
 from matplotlib.lines import Line2D
 from matplotlib.patches import Arc
 import os
 import matplotlib.animation as animation
-from matplotlib.widgets import TextBox
+from matplotlib.widgets import TextBox, Button
 
 LONGUEUR_TERRAIN = 14.325
 LARGEUR_TERRAIN = 15.24
@@ -59,7 +61,39 @@ def choix_equipes_console():
 
     return equipe1, equipe2 # retourne les deux équipes choisies
 
-equipe1, equipe2=choix_equipes_console() # Appel de la fonction pour choisir les équipes
+# Fonction pour le menu de choix des équipes (interface graphique)
+def choix_equipe_tkinter():
+    equipe1 = None
+    equipe2 = None
+
+    fenetre = tk.Tk()
+    fenetre.title("Choix des équipes")
+    fenetre.geometry("400x200")
+
+    # Titre + menu déroulant pour la première équipe
+    ttk.Label(fenetre, text="Choisissez la première équipe :").pack(pady=10) # permet d'afficher un texte
+    menu_deroulant1 = ttk.Combobox(fenetre, values=equipes_NBA,state="readonly") # ttk.Combobox menu déroulant avec les équipes NBA, menu_deroulant1 est le nom du menu
+    menu_deroulant1.pack() # place le menu en dessous du label
+
+    # Titre + menu déroulant pour la deuxième équipe
+    ttk.Label(fenetre, text="Choisissez la deuxième équipe :").pack(pady=10) # permet d'afficher un texte
+    menu_deroulant2 = ttk.Combobox(fenetre, values=equipes_NBA,state="readonly") # ttk.Combobox menu déroulant avec les équipes NBA, menu_deroulant2 est le nom du menu
+    menu_deroulant2.pack() # place le menu en dessous du label
+
+    def valider_choix():
+        nonlocal equipe1, equipe2
+        equipe1 = menu_deroulant1.get() # Récupère l'équipe sélectionnée dans le menu déroulant 1
+        equipe2 = menu_deroulant2.get() # Récupère l'équipe sélectionnée dans le menu déroulant 2
+        fenetre.destroy()  # Ferme la fenêtre après la sélection 
+
+    tk.Button(fenetre, text="Valider", command=valider_choix).pack(pady=20)     
+    fenetre.mainloop()
+    return equipe1, equipe2  
+
+
+equipe1, equipe2=choix_equipe_tkinter() # Appel de la fonction pour choisir les équipes
+
+
 
 
 # Fonction qui trace le terrain de basket
@@ -83,5 +117,8 @@ fig = plt.figure(figsize=(12, 6)) #Taille de la fenêtre affichée
 fig.suptitle(f"{equipe1}  —  {equipe2}", fontsize=16)
 ax_terrain = fig.add_subplot(1, 2, 1) #Pour bien ajuster le terrain
 
+
+
 dessiner_terrain(plt.gca())
+
 plt.show()
