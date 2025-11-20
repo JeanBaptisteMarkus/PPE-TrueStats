@@ -91,7 +91,62 @@ def choix_equipe_tkinter():
     return equipe1, equipe2  
 
 
-equipe1, equipe2=choix_equipe_tkinter() # Appel de la fonction pour choisir les équipes
+# Fonction pour le menu de choix du contexte du match (interface graphique)
+def choix_contexte_tkinter():
+
+    equipe1=None
+    equipe2=None
+    score_equipe1=None
+    score_equipe2=None
+    temps_restant=None
+
+    fenetre = tk.Tk()
+    fenetre.title("Choix du contexte du match")
+    fenetre.geometry("500x500")
+
+    # *****Choix des équipes*****
+    # Titre + menu déroulant pour la première équipe
+    ttk.Label(fenetre, text="Choisissez la première équipe :").pack(pady=10) # permet d'afficher un texte
+    menu_deroulant1 = ttk.Combobox(fenetre, values=equipes_NBA,state="readonly") # ttk.Combobox menu déroulant avec les équipes NBA, menu_deroulant1 est le nom du menu
+    menu_deroulant1.pack() # place le menu en dessous du label
+
+    # Titre + menu déroulant pour la deuxième équipe
+    ttk.Label(fenetre, text="Choisissez la deuxième équipe :").pack(pady=10) # permet d'afficher un texte
+    menu_deroulant2 = ttk.Combobox(fenetre, values=equipes_NBA,state="readonly") # ttk.Combobox menu déroulant avec les équipes NBA, menu_deroulant2 est le nom du menu
+    menu_deroulant2.pack() # place le menu en dessous du label
+
+
+    # *****Choix des scores*****
+    # Titre + entrée pour le score de la première équipe
+    ttk.Label(fenetre, text="Score de la première équipe :").pack(pady=10)
+    choix_score_equipe1 = tk.Entry(fenetre)
+    choix_score_equipe1.pack() 
+
+    # Titre + entrée pour le score de la deuxième équipe
+    ttk.Label(fenetre, text="Score de la deuxième équipe :").pack(pady=10)
+    choix_score_equipe2 = tk.Entry(fenetre)
+    choix_score_equipe2.pack()
+
+    # *****Choix du temps restant*****
+    ttk.Label(fenetre, text="Temps restant (en secondes) :").pack(pady=10)
+    choix_temps_restant = tk.Entry(fenetre)
+    choix_temps_restant.pack()
+
+    # *****Bouton de validation du contexte*****
+    def valider_choix():
+        nonlocal equipe1, equipe2, score_equipe1, score_equipe2, temps_restant
+        equipe1 = menu_deroulant1.get() # Récupère l'équipe sélectionnée dans le menu déroulant 1
+        equipe2 = menu_deroulant2.get() # Récupère l'équipe sélectionnée dans le menu déroulant 2
+        score_equipe1 = int(choix_score_equipe1.get()) # Récupère le score de l'équipe 1
+        score_equipe2 = int(choix_score_equipe2.get()) # Récupère le score de l'équipe 2
+        temps_restant = int(choix_temps_restant.get()) # Récupère le temps restant
+        fenetre.destroy()  # Ferme la fenêtre après la sélection
+
+    tk.Button(fenetre, text="Valider", command=valider_choix).pack(pady=20)     
+    fenetre.mainloop()
+    return equipe1, equipe2, score_equipe1, score_equipe2, temps_restant    
+
+equipe1,equipe2,score_equipe1, score_equipe2, temps_restant  =choix_contexte_tkinter() # Appel de la fonction pour choisir le contexte du match
 
 
 
@@ -114,7 +169,7 @@ def dessiner_terrain(ax):
     ax.add_patch(panier)
 
 fig = plt.figure(figsize=(12, 6)) #Taille de la fenêtre affichée
-fig.suptitle(f"{equipe1}  —  {equipe2}", fontsize=16)
+fig.suptitle(f"{equipe1}:{score_equipe1}  —  {equipe2}:{score_equipe2} ////temps restant : {temps_restant}", fontsize=16) # affiche le nom des équipes, le score et le temps restant en haut de la fenêtre
 ax_terrain = fig.add_subplot(1, 2, 1) #Pour bien ajuster le terrain
 
 
