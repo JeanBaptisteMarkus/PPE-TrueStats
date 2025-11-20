@@ -40,57 +40,7 @@ class Joueur:
         self.position = [0.0, 0.0]
 
 
-# fonction pour choisir les équipes
-def choix_equipes_console():
-
-    print("Liste des équipes NBA disponibles :")
-    for index, equipe in enumerate(equipes_NBA): # enumerate créer un index pour chaque équipe et le nom de l'équipe (equipe)
-        print(f"{index + 1}. {equipe}") # Affiche la liste des équipes avec leur numéro, (index+1) car l'index commence à 0
-
-    #Demande à l'utilisateur de taper un numéro pour la première équipe
-    # int() transforme la saisie en nombre
-    # On retire 1 pour obtenir l'index correct dans la liste (équipe 1  → index 0)
-    choix1 = int(input("Choisissez le numéro de la première équipe : ")) - 1
-    choix2 = int(input("Choisissez le numéro de la deuxième équipe : ")) - 1
-
-    # Récupération des équipes choisies
-    equipe1 = equipes_NBA[choix1]
-    equipe2 = equipes_NBA[choix2]
-
-    print(f"\n Match sélectionné : {equipe1} VS {equipe2}")
-
-    return equipe1, equipe2 # retourne les deux équipes choisies
-
-# Fonction pour le menu de choix des équipes (interface graphique)
-def choix_equipe_tkinter():
-    equipe1 = None
-    equipe2 = None
-
-    fenetre = tk.Tk()
-    fenetre.title("Choix des équipes")
-    fenetre.geometry("400x200")
-
-    # Titre + menu déroulant pour la première équipe
-    ttk.Label(fenetre, text="Choisissez la première équipe :").pack(pady=10) # permet d'afficher un texte
-    menu_deroulant1 = ttk.Combobox(fenetre, values=equipes_NBA,state="readonly") # ttk.Combobox menu déroulant avec les équipes NBA, menu_deroulant1 est le nom du menu
-    menu_deroulant1.pack() # place le menu en dessous du label
-
-    # Titre + menu déroulant pour la deuxième équipe
-    ttk.Label(fenetre, text="Choisissez la deuxième équipe :").pack(pady=10) # permet d'afficher un texte
-    menu_deroulant2 = ttk.Combobox(fenetre, values=equipes_NBA,state="readonly") # ttk.Combobox menu déroulant avec les équipes NBA, menu_deroulant2 est le nom du menu
-    menu_deroulant2.pack() # place le menu en dessous du label
-
-    def valider_choix():
-        nonlocal equipe1, equipe2
-        equipe1 = menu_deroulant1.get() # Récupère l'équipe sélectionnée dans le menu déroulant 1
-        equipe2 = menu_deroulant2.get() # Récupère l'équipe sélectionnée dans le menu déroulant 2
-        fenetre.destroy()  # Ferme la fenêtre après la sélection 
-
-    tk.Button(fenetre, text="Valider", command=valider_choix).pack(pady=20)     
-    fenetre.mainloop()
-    return equipe1, equipe2  
-
-
+ 
 # Fonction pour le menu de choix du contexte du match (interface graphique)
 def choix_contexte_tkinter():
 
