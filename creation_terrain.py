@@ -54,35 +54,33 @@ def choix_contexte_tkinter():
     fenetre.title("Choix du contexte du match")
     fenetre.geometry("500x500")
 
-    # *****Choix des équipes*****
-    # Titre + menu déroulant pour la première équipe
-    ttk.Label(fenetre, text="Choisissez la première équipe :").pack(pady=10) # permet d'afficher un texte
+
+    # ***choix de la première équipe***
+    ttk.Label(fenetre, text="Équipe 1 :").grid(row=0, column=0, padx=10, pady=10, sticky="w") # permet d'afficher un texte
     menu_deroulant1 = ttk.Combobox(fenetre, values=equipes_NBA,state="readonly") # ttk.Combobox menu déroulant avec les équipes NBA, menu_deroulant1 est le nom du menu
-    menu_deroulant1.pack() # place le menu en dessous du label
+    menu_deroulant1.grid(row=0, column=1, padx=10) # place le menu a côté du label
+    # ***entrée pour le score de la première équipe***
+    ttk.Label(fenetre, text="Score équipe 1 :").grid(row=0, column=2, padx=10,sticky="w")
+    choix_score_equipe1 = tk.Entry(fenetre,width=5)
+    choix_score_equipe1.grid(row=0, column=3)
 
-    # Titre + menu déroulant pour la deuxième équipe
-    ttk.Label(fenetre, text="Choisissez la deuxième équipe :").pack(pady=10) # permet d'afficher un texte
+
+    # ***choix de la deuxième équipe***
+    ttk.Label(fenetre, text="Équipe 2 :").grid(row=1, column=0, padx=10, pady=10, sticky="w") # permet d'afficher un texte
     menu_deroulant2 = ttk.Combobox(fenetre, values=equipes_NBA,state="readonly") # ttk.Combobox menu déroulant avec les équipes NBA, menu_deroulant2 est le nom du menu
-    menu_deroulant2.pack() # place le menu en dessous du label
+    menu_deroulant2.grid(row=1, column=1, padx=10) # place le menu a côté du label
+    # ***entrée pour le score de la deuxième équipe***
+    ttk.Label(fenetre, text="Score équipe 2 :").grid(row=1, column=2, padx=10)
+    choix_score_equipe2 = tk.Entry(fenetre,width=5)
+    choix_score_equipe2.grid(row=1, column=3)
 
 
-    # *****Choix des scores*****
-    # Titre + entrée pour le score de la première équipe
-    ttk.Label(fenetre, text="Score de la première équipe :").pack(pady=10)
-    choix_score_equipe1 = tk.Entry(fenetre)
-    choix_score_equipe1.pack() 
+    # ***Choix du temps restant***
+    ttk.Label(fenetre, text="Temps restant (en secondes) :").grid(row=2, column=0, padx=10, pady=10, sticky="w")
+    choix_temps_restant = tk.Entry(fenetre,width=5)
+    choix_temps_restant.grid(row=2, column=1, padx=10)
 
-    # Titre + entrée pour le score de la deuxième équipe
-    ttk.Label(fenetre, text="Score de la deuxième équipe :").pack(pady=10)
-    choix_score_equipe2 = tk.Entry(fenetre)
-    choix_score_equipe2.pack()
-
-    # *****Choix du temps restant*****
-    ttk.Label(fenetre, text="Temps restant (en secondes) :").pack(pady=10)
-    choix_temps_restant = tk.Entry(fenetre)
-    choix_temps_restant.pack()
-
-    # *****Bouton de validation du contexte*****
+    # ***Bouton de validation du contexte***
     def valider_choix():
         nonlocal equipe1, equipe2, score_equipe1, score_equipe2, temps_restant
         equipe1 = menu_deroulant1.get() # Récupère l'équipe sélectionnée dans le menu déroulant 1
@@ -92,7 +90,7 @@ def choix_contexte_tkinter():
         temps_restant = int(choix_temps_restant.get()) # Récupère le temps restant
         fenetre.destroy()  # Ferme la fenêtre après la sélection
 
-    tk.Button(fenetre, text="Valider", command=valider_choix).pack(pady=20)     
+    tk.Button(fenetre, text="Valider", command=valider_choix).grid(row=3, column=0, columnspan=4, pady=20)    
     fenetre.mainloop()
     return equipe1, equipe2, score_equipe1, score_equipe2, temps_restant    
 
@@ -119,7 +117,7 @@ def dessiner_terrain(ax):
     ax.add_patch(panier)
 
 fig = plt.figure(figsize=(12, 6)) #Taille de la fenêtre affichée
-fig.suptitle(f"{equipe1}:{score_equipe1}  —  {equipe2}:{score_equipe2} ////temps restant : {temps_restant}", fontsize=16) # affiche le nom des équipes, le score et le temps restant en haut de la fenêtre
+fig.suptitle(f"{equipe1}:{score_equipe1}  —  {equipe2}:{score_equipe2}     temps restant : {temps_restant}", fontsize=16) # affiche le nom des équipes, le score et le temps restant en haut de la fenêtre
 ax_terrain = fig.add_subplot(1, 2, 1) #Pour bien ajuster le terrain
 
 
