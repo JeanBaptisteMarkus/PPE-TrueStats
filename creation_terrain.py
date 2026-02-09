@@ -104,11 +104,33 @@ def choix_contexte_tkinter():
     # ***Bouton de validation du contexte***
     def valider_choix():
         nonlocal equipe1, equipe2, score_equipe1, score_equipe2, temps_restant
-        equipe1 = equipes_NBA[menu_deroulant1.get()] # Récupère l'abréviation de l'équipe 1
-        equipe2 = equipes_NBA[menu_deroulant2.get()] # Récupère l'abréviation de l'équipe 2
-        score_equipe1 = int(choix_score_equipe1.get()) # Récupère le score de l'équipe 1
-        score_equipe2 = int(choix_score_equipe2.get()) # Récupère le score de l'équipe 2
-        temps_restant = int(choix_temps_restant.get()) # Récupère le temps restant
+        
+        # Récupérer les valeurs ou utiliser des valeurs aléatoires
+        equipe1_choix = menu_deroulant1.get()
+        if not equipe1_choix:
+            equipe1_choix = random.choice(list(equipes_NBA.keys()))
+        equipe1 = equipes_NBA[equipe1_choix]
+        
+        equipe2_choix = menu_deroulant2.get()
+        if not equipe2_choix:
+            equipe2_choix = random.choice(list(equipes_NBA.keys()))
+        equipe2 = equipes_NBA[equipe2_choix]
+        
+        try:
+            score_equipe1 = int(choix_score_equipe1.get()) if choix_score_equipe1.get() else random.randint(60, 120)
+        except ValueError:
+            score_equipe1 = random.randint(60, 120)
+        
+        try:
+            score_equipe2 = int(choix_score_equipe2.get()) if choix_score_equipe2.get() else random.randint(60, 120)
+        except ValueError:
+            score_equipe2 = random.randint(60, 120)
+        
+        try:
+            temps_restant = int(choix_temps_restant.get()) if choix_temps_restant.get() else random.randint(1, 2880)
+        except ValueError:
+            temps_restant = random.randint(1, 2880)
+        
         fenetre.destroy()  # Ferme la fenêtre après la sélection
 
     tk.Button(fenetre, text="Valider", command=valider_choix).grid(row=3, column=0, columnspan=4, pady=20)    
