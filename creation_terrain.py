@@ -14,7 +14,7 @@ from matplotlib.widgets import TextBox, Button
 LONGUEUR_TERRAIN = 14.325
 LARGEUR_TERRAIN = 15.24
 
-
+# Dictionnaire des équipes NBA avec leurs abréviations
 equipes_NBA = {
     "Atlanta Hawks": "ATL",
     "Boston Celtics": "BOS",
@@ -118,14 +118,14 @@ def choix_contexte_tkinter():
 equipe1,equipe2,score_equipe1, score_equipe2, temps_restant  =choix_contexte_tkinter() # Appel de la fonction pour choisir le contexte du match
 
 
-# Fonction pour charger les joueurs du fichier CSV
+# Fonction pour charger les joueurs depuis un fichier CSV
 def charger_joueurs(nom_fichier):
-    df = pd.read_csv(nom_fichier)
+    df = pd.read_csv(nom_fichier) # lit le fichier CSV et le stocke dans un DataFrame pandas
     joueurs = []
-    for index, row in df.iterrows():
-        joueur = Joueur(row['ID'], row['Nom'], row['Prenom'], row['Taille'], row['AverageRebond'], row['Equipe'])
-        joueurs.append(joueur)
-    return joueurs
+    for index, row in df.iterrows(): # itère sur chaque ligne du DataFrame
+        joueur = Joueur(row['ID'], row['Nom'], row['Prenom'], row['Taille'], row['AverageRebond'], row['Equipe']) # Crée un objet Joueur pour chaque ligne du fichier CSV
+        joueurs.append(joueur) # Ajoute le joueur à la liste des joueurs
+    return joueurs # Retourne la liste des joueurs chargés depuis le fichier CSV
 
 
 # Fonction pour sélectionner 5 joueurs aléatoires d'une équipe
@@ -136,7 +136,23 @@ def selectionner_joueurs(joueurs, equipe, nombre=5):
 
 # Classe pour gérer l'interaction avec les joueurs
 class GestionnaireJoueurs:
+    """
+    Cette classe gère 
+    l'affichage des joueurs sur le terrain, 
+    la sélection d'un joueur, et le remplacement d'un joueur par un remplaçant disponible. 
+    Elle utilise les événements de souris pour permettre à l'utilisateur de cliquer sur un joueur pour le sélectionner, de faire glisser un joueur pour le déplacer sur le terrain, et de cliquer sur un remplaçant dans le panneau de remplacement pour effectuer un remplacement.
+    """
     def __init__(self, fig, ax_terrain, ax_remplacements, joueurs_equipe1, joueurs_equipe2, joueurs_restants1, joueurs_restants2):
+        """ 
+        Constructeur de la classe.
+        - fig : la figure matplotlib principale.
+        - ax_terrain : l'axe où le terrain et les joueurs sont affichés.
+        - ax_remplacements : l'axe où le panneau de remplacements est affiché.
+        - joueurs_equipe1 : liste des joueurs sur le terrain pour l'équipe 1.
+        - joueurs_equipe2 : liste des joueurs sur le terrain pour l'équipe 2.
+        - joueurs_restants1 : liste des remplaçants pour l'équipe 1.
+        - joueurs_restants2 : liste des remplaçants pour l'équipe 2.
+        """
         self.fig = fig
         self.ax_terrain = ax_terrain
         self.ax_remplacements = ax_remplacements
@@ -147,24 +163,27 @@ class GestionnaireJoueurs:
         self.joueur_selectionne = None
         self.dragging = False
         
+    # Retourne le nom complet d'un joueur sous forme 'Prénom Nom'.    
     def obtenir_nom_complet(self, joueur):
         return f"{joueur.prenom} {joueur.nom}"
     
     def remplacer_joueur(self, joueur_a_remplacer, nouveau_joueur):
+        # Si le joueur à remplacer est dans l'équipe 1
         if joueur_a_remplacer in self.joueurs_equipe1:
-            idx = self.joueurs_equipe1.index(joueur_a_remplacer)
-            self.joueurs_equipe1[idx] = nouveau_joueur
-            nouveau_joueur.position = joueur_a_remplacer.position.copy()
-            self.joueurs_restants1.append(joueur_a_remplacer)
-            self.joueurs_restants1.remove(nouveau_joueur)
+            idx = self.joueurs_equipe1.index(joueur_a_remplacer) # on recupère son index dans la liste des joueurs sur le terrain
+            self.joueurs_equipe1[idx] = nouveau_joueur # on remplace ce joueur par le nouveau joueur
+            nouveau_joueur.position = joueur_a_remplacer.position.copy() # le remplaçant prend la position du joueur remplacé
+            self.joueurs_restants1.append(joueur_a_remplacer) # on ajoute le joueur remplacé à la liste des remplaçants
+            self.joueurs_restants1.remove(nouveau_joueur) # on retire le nouveau joueur de la liste des remplaçants
         else:
-            idx = self.joueurs_equipe2.index(joueur_a_remplacer)
-            self.joueurs_equipe2[idx] = nouveau_joueur
-            nouveau_joueur.position = joueur_a_remplacer.position.copy()
-            self.joueurs_restants2.append(joueur_a_remplacer)
-            self.joueurs_restants2.remove(nouveau_joueur)
+            # Si le joueur à remplacer est dans l'équipe 2
+            idx = self.joueurs_equipe2.index(joueur_a_remplacer) # on recupère son index dans la liste des joueurs sur le terrain
+            self.joueurs_equipe2[idx] = nouveau_joueur # on remplace ce joueur par le nouveau joueur
+            nouveau_joueur.position = joueur_a_remplacer.position.copy() # le remplaçant prend la position du joueur remplacé
+            self.joueurs_restants2.append(joueur_a_remplacer) # on ajoute le joueur remplacé à la liste des remplaçants
+            self.joueurs_restants2.remove(nouveau_joueur) # on retire le nouveau joueur de la liste des remplaçants
         
-        self.joueur_selectionne = nouveau_joueur
+        self.joueur_selectionne = nouveau_joueur # le nouveau joueur devient le joueur sélectionné après le remplacement
     
     def draw_players(self):
         self.ax_terrain.clear()
