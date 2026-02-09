@@ -15,17 +15,38 @@ LONGUEUR_TERRAIN = 14.325
 LARGEUR_TERRAIN = 15.24
 
 
-equipes_NBA = [
-    "Atlanta Hawks", "Boston Celtics", "Brooklyn Nets", "Charlotte Hornets",
-    "Chicago Bulls", "Cleveland Cavaliers", "Dallas Mavericks", "Denver Nuggets",
-    "Detroit Pistons", "Golden State Warriors", "Houston Rockets",
-    "Indiana Pacers", "Los Angeles Clippers", "Los Angeles Lakers",
-    "Memphis Grizzlies", "Miami Heat", "Milwaukee Bucks",
-    "Minnesota Timberwolves", "New Orleans Pelicans", "New York Knicks",
-    "Oklahoma City Thunder", "Orlando Magic", "Philadelphia 76ers",
-    "Phoenix Suns", "Portland Trail Blazers", "Sacramento Kings",
-    "San Antonio Spurs", "Toronto Raptors", "Utah Jazz", "Washington Wizards"
-]
+equipes_NBA = {
+    "Atlanta Hawks": "ATL",
+    "Boston Celtics": "BOS",
+    "Brooklyn Nets": "BKN",
+    "Charlotte Hornets": "CHA",
+    "Chicago Bulls": "CHI",
+    "Cleveland Cavaliers": "CLE",
+    "Dallas Mavericks": "DAL",
+    "Denver Nuggets": "DEN",
+    "Detroit Pistons": "DET",
+    "Golden State Warriors": "GSW",
+    "Houston Rockets": "HOU",
+    "Indiana Pacers": "IND",
+    "Los Angeles Clippers": "LAC",
+    "Los Angeles Lakers": "LAL",
+    "Memphis Grizzlies": "MEM",
+    "Miami Heat": "MIA",
+    "Milwaukee Bucks": "MIL",
+    "Minnesota Timberwolves": "MIN",
+    "New Orleans Pelicans": "NOP",
+    "New York Knicks": "NYK",
+    "Oklahoma City Thunder": "OKC",
+    "Orlando Magic": "ORL",
+    "Philadelphia 76ers": "PHI",
+    "Phoenix Suns": "PHX",
+    "Portland Trail Blazers": "POR",
+    "Sacramento Kings": "SAC",
+    "San Antonio Spurs": "SAS",
+    "Toronto Raptors": "TOR",
+    "Utah Jazz": "UTA",
+    "Washington Wizards": "WAS"
+}
 
 
 # Classe Joueur pour stocker les informations des joueurs
@@ -57,7 +78,7 @@ def choix_contexte_tkinter():
 
     # ***choix de la première équipe***
     ttk.Label(fenetre, text="Équipe 1 :").grid(row=0, column=0, padx=10, pady=10, sticky="w") # permet d'afficher un texte
-    menu_deroulant1 = ttk.Combobox(fenetre, values=equipes_NBA,state="readonly") # ttk.Combobox menu déroulant avec les équipes NBA, menu_deroulant1 est le nom du menu
+    menu_deroulant1 = ttk.Combobox(fenetre, values=list(equipes_NBA.keys()),state="readonly") # ttk.Combobox menu déroulant avec les équipes NBA, menu_deroulant1 est le nom du menu
     menu_deroulant1.grid(row=0, column=1, padx=10) # place le menu a côté du label
     # ***entrée pour le score de la première équipe***
     ttk.Label(fenetre, text="Score équipe 1 :").grid(row=0, column=2, padx=10,sticky="w")
@@ -67,7 +88,7 @@ def choix_contexte_tkinter():
 
     # ***choix de la deuxième équipe***
     ttk.Label(fenetre, text="Équipe 2 :").grid(row=1, column=0, padx=10, pady=10, sticky="w") # permet d'afficher un texte
-    menu_deroulant2 = ttk.Combobox(fenetre, values=equipes_NBA,state="readonly") # ttk.Combobox menu déroulant avec les équipes NBA, menu_deroulant2 est le nom du menu
+    menu_deroulant2 = ttk.Combobox(fenetre, values=list(equipes_NBA.keys()),state="readonly") # ttk.Combobox menu déroulant avec les équipes NBA, menu_deroulant2 est le nom du menu
     menu_deroulant2.grid(row=1, column=1, padx=10) # place le menu a côté du label
     # ***entrée pour le score de la deuxième équipe***
     ttk.Label(fenetre, text="Score équipe 2 :").grid(row=1, column=2, padx=10)
@@ -83,8 +104,8 @@ def choix_contexte_tkinter():
     # ***Bouton de validation du contexte***
     def valider_choix():
         nonlocal equipe1, equipe2, score_equipe1, score_equipe2, temps_restant
-        equipe1 = menu_deroulant1.get() # Récupère l'équipe sélectionnée dans le menu déroulant 1
-        equipe2 = menu_deroulant2.get() # Récupère l'équipe sélectionnée dans le menu déroulant 2
+        equipe1 = equipes_NBA[menu_deroulant1.get()] # Récupère l'abréviation de l'équipe 1
+        equipe2 = equipes_NBA[menu_deroulant2.get()] # Récupère l'abréviation de l'équipe 2
         score_equipe1 = int(choix_score_equipe1.get()) # Récupère le score de l'équipe 1
         score_equipe2 = int(choix_score_equipe2.get()) # Récupère le score de l'équipe 2
         temps_restant = int(choix_temps_restant.get()) # Récupère le temps restant
@@ -97,6 +118,187 @@ def choix_contexte_tkinter():
 equipe1,equipe2,score_equipe1, score_equipe2, temps_restant  =choix_contexte_tkinter() # Appel de la fonction pour choisir le contexte du match
 
 
+# Fonction pour charger les joueurs du fichier CSV
+def charger_joueurs(nom_fichier):
+    df = pd.read_csv(nom_fichier)
+    joueurs = []
+    for index, row in df.iterrows():
+        joueur = Joueur(row['ID'], row['Nom'], row['Prenom'], row['Taille'], row['AverageRebond'], row['Equipe'])
+        joueurs.append(joueur)
+    return joueurs
+
+
+# Fonction pour sélectionner 5 joueurs aléatoires d'une équipe
+def selectionner_joueurs(joueurs, equipe, nombre=5):
+    joueurs_equipe = [j for j in joueurs if j.equipe == equipe]
+    return random.sample(joueurs_equipe, min(nombre, len(joueurs_equipe)))
+
+
+# Classe pour gérer l'interaction avec les joueurs
+class GestionnaireJoueurs:
+    def __init__(self, fig, ax_terrain, ax_remplacements, joueurs_equipe1, joueurs_equipe2, joueurs_restants1, joueurs_restants2):
+        self.fig = fig
+        self.ax_terrain = ax_terrain
+        self.ax_remplacements = ax_remplacements
+        self.joueurs_equipe1 = joueurs_equipe1
+        self.joueurs_equipe2 = joueurs_equipe2
+        self.joueurs_restants1 = joueurs_restants1
+        self.joueurs_restants2 = joueurs_restants2
+        self.joueur_selectionne = None
+        self.dragging = False
+        
+    def obtenir_nom_complet(self, joueur):
+        return f"{joueur.prenom} {joueur.nom}"
+    
+    def remplacer_joueur(self, joueur_a_remplacer, nouveau_joueur):
+        if joueur_a_remplacer in self.joueurs_equipe1:
+            idx = self.joueurs_equipe1.index(joueur_a_remplacer)
+            self.joueurs_equipe1[idx] = nouveau_joueur
+            nouveau_joueur.position = joueur_a_remplacer.position.copy()
+            self.joueurs_restants1.append(joueur_a_remplacer)
+            self.joueurs_restants1.remove(nouveau_joueur)
+        else:
+            idx = self.joueurs_equipe2.index(joueur_a_remplacer)
+            self.joueurs_equipe2[idx] = nouveau_joueur
+            nouveau_joueur.position = joueur_a_remplacer.position.copy()
+            self.joueurs_restants2.append(joueur_a_remplacer)
+            self.joueurs_restants2.remove(nouveau_joueur)
+        
+        self.joueur_selectionne = nouveau_joueur
+    
+    def draw_players(self):
+        self.ax_terrain.clear()
+        dessiner_terrain(self.ax_terrain)
+        
+        joueurs = self.joueurs_equipe1 + self.joueurs_equipe2
+        for joueur in joueurs:
+            x, y = joueur.position
+            couleur = 'blue' if joueur in self.joueurs_equipe1 else 'red'
+            taille = 150 if self.joueur_selectionne == joueur else 100
+            bord = 'yellow' if self.joueur_selectionne == joueur else 'black'
+            self.ax_terrain.scatter(x, y, s=taille, c=couleur, edgecolors=bord, linewidths=2, zorder=5)
+            self.ax_terrain.text(x, y + 0.4, self.obtenir_nom_complet(joueur), ha='center', fontsize=8, zorder=10)
+        
+        self.ax_terrain.set_xlim(-1, LONGUEUR_TERRAIN + 1)
+        self.ax_terrain.set_ylim(-1, LARGEUR_TERRAIN + 1)
+        self.ax_terrain.set_aspect('equal')
+        self.ax_terrain.axis('off')
+        self.fig.canvas.draw_idle()
+    
+    def draw_remplacement_panel(self):
+        self.ax_remplacements.clear()
+        self.ax_remplacements.axis('off')
+        
+        if self.joueur_selectionne is None:
+            self.ax_remplacements.text(0.5, 0.5, 'Cliquez sur un joueur\npour le remplacer', 
+                                     ha='center', va='center', fontsize=12, transform=self.ax_remplacements.transAxes)
+            self.fig.canvas.draw_idle()
+            return
+        
+        if self.joueur_selectionne in self.joueurs_equipe1:
+            tous = [j for j in self.joueurs_equipe1 + self.joueurs_restants1 if j.equipe == self.joueur_selectionne.equipe]
+            sur_terrain = self.joueurs_equipe1
+        else:
+            tous = [j for j in self.joueurs_equipe2 + self.joueurs_restants2 if j.equipe == self.joueur_selectionne.equipe]
+            sur_terrain = self.joueurs_equipe2
+        
+        remplaçants = [j for j in tous if j not in sur_terrain]
+        
+        if not remplaçants:
+            self.ax_remplacements.text(0.5, 0.5, "Pas de remplaçants disponibles", 
+                                     ha='center', va='center', fontsize=12, transform=self.ax_remplacements.transAxes)
+            self.fig.canvas.draw_idle()
+            return
+        
+        title_text = f"Remplaçants pour\n{self.obtenir_nom_complet(self.joueur_selectionne)}"
+        self.ax_remplacements.text(0.5, 0.95, title_text, fontsize=11, weight='bold', 
+                                 ha='center', va='top', transform=self.ax_remplacements.transAxes)
+        
+        y = 0.85
+        for idx, joueur in enumerate(remplaçants):
+            text_obj = self.ax_remplacements.text(0.1, y, f"{idx + 1}. {self.obtenir_nom_complet(joueur)}", 
+                                                fontsize=10, ha='left', va='center',
+                                                picker=True, color='blue', transform=self.ax_remplacements.transAxes)
+            y -= 0.10
+            if y < 0:
+                break
+        
+        self.fig.canvas.draw_idle()
+    
+    def on_click(self, event):
+        if event.inaxes == self.ax_terrain:
+            x_click, y_click = event.xdata, event.ydata
+            for joueur in self.joueurs_equipe1 + self.joueurs_equipe2:
+                x, y = joueur.position
+                dist = np.hypot(x - x_click, y - y_click)
+                if dist < 0.7:
+                    self.joueur_selectionne = joueur
+                    self.dragging = True
+                    self.draw_players()
+                    self.draw_remplacement_panel()
+                    return
+            
+            self.joueur_selectionne = None
+            self.dragging = False
+            self.draw_players()
+            self.draw_remplacement_panel()
+    
+    def on_pick_remplacant(self, event):
+        if isinstance(event.artist, plt.Text) and self.joueur_selectionne:
+            nom_prenom = event.artist.get_text()
+            # Extraire le nom du texte (enlever le numéro)
+            if '. ' in nom_prenom:
+                nom_prenom = nom_prenom.split('. ', 1)[1]
+            
+            # Récupérer les remplaçants disponibles
+            if self.joueur_selectionne in self.joueurs_equipe1:
+                tous = [j for j in self.joueurs_equipe1 + self.joueurs_restants1 if j.equipe == self.joueur_selectionne.equipe]
+                sur_terrain = self.joueurs_equipe1
+            else:
+                tous = [j for j in self.joueurs_equipe2 + self.joueurs_restants2 if j.equipe == self.joueur_selectionne.equipe]
+                sur_terrain = self.joueurs_equipe2
+            
+            remplaçants = [j for j in tous if j not in sur_terrain]
+            
+            # Trouver le joueur correspondant
+            for joueur in remplaçants:
+                if self.obtenir_nom_complet(joueur) == nom_prenom:
+                    self.remplacer_joueur(self.joueur_selectionne, joueur)
+                    self.draw_players()
+                    self.draw_remplacement_panel()
+                    break
+    
+    def on_drag(self, event):
+        if not self.dragging or self.joueur_selectionne is None or event.inaxes != self.ax_terrain:
+            return
+        x_new, y_new = event.xdata, event.ydata
+        x_new = np.clip(x_new, 0, LONGUEUR_TERRAIN)
+        y_new = np.clip(y_new, 0, LARGEUR_TERRAIN)
+        self.joueur_selectionne.position = [x_new, y_new]
+        self.draw_players()
+    
+    def on_release(self, event):
+        self.dragging = False
+
+
+# Charger les joueurs depuis le fichier
+joueurs = charger_joueurs('InfosJoueurs')
+
+# Sélectionner 5 joueurs de chaque équipe
+joueurs_equipe1 = selectionner_joueurs(joueurs, equipe1, 5)
+joueurs_equipe2 = selectionner_joueurs(joueurs, equipe2, 5)
+
+# Récupérer les joueurs restants (non placés)
+tous_joueurs_equipe1 = [j for j in joueurs if j.equipe == equipe1]
+tous_joueurs_equipe2 = [j for j in joueurs if j.equipe == equipe2]
+joueurs_restants1 = [j for j in tous_joueurs_equipe1 if j not in joueurs_equipe1]
+joueurs_restants2 = [j for j in tous_joueurs_equipe2 if j not in joueurs_equipe2]
+
+# Placer les joueurs sur le terrain avec positions aléatoires
+for joueur in joueurs_equipe1:
+    joueur.position = [random.uniform(0.5, LONGUEUR_TERRAIN / 2), random.uniform(0.5, LARGEUR_TERRAIN - 0.5)]
+for joueur in joueurs_equipe2:
+    joueur.position = [random.uniform(LONGUEUR_TERRAIN / 2, LONGUEUR_TERRAIN - 0.5), random.uniform(0.5, LARGEUR_TERRAIN - 0.5)]
 
 
 # Fonction qui trace le terrain de basket
@@ -116,12 +318,23 @@ def dessiner_terrain(ax):
     panier = plt.Circle((1.6, LARGEUR_TERRAIN / 2), 0.225, fill=False, color='orange')
     ax.add_patch(panier)
 
-fig = plt.figure(figsize=(12, 6)) #Taille de la fenêtre affichée
+fig = plt.figure(figsize=(16, 6)) #Taille de la fenêtre affichée
 fig.suptitle(f"{equipe1}:{score_equipe1}  —  {equipe2}:{score_equipe2}     temps restant : {temps_restant}", fontsize=16) # affiche le nom des équipes, le score et le temps restant en haut de la fenêtre
+
 ax_terrain = fig.add_subplot(1, 2, 1) #Pour bien ajuster le terrain
+ax_remplacements = fig.add_subplot(1, 2, 2) #Panel pour les remplacements
 
+# Créer le gestionnaire de joueurs
+gestionnaire = GestionnaireJoueurs(fig, ax_terrain, ax_remplacements, joueurs_equipe1, joueurs_equipe2, joueurs_restants1, joueurs_restants2)
 
+# Dessiner les joueurs
+gestionnaire.draw_players()
+gestionnaire.draw_remplacement_panel()
 
-dessiner_terrain(plt.gca())
+# Connecter les événements de souris
+fig.canvas.mpl_connect('button_press_event', gestionnaire.on_click)
+fig.canvas.mpl_connect('motion_notify_event', gestionnaire.on_drag)
+fig.canvas.mpl_connect('button_release_event', gestionnaire.on_release)
+fig.canvas.mpl_connect('pick_event', gestionnaire.on_pick_remplacant)
 
 plt.show()
