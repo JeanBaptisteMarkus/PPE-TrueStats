@@ -87,11 +87,15 @@ class SituationBasket:
         if self.rebondeur is None:
             return
 
+        # --- déterminer adversaires et coéquipiers ---
         if self.rebondeur.equipe == equipe1Nom:
             adversaires = self.equipe_B
+            coequipiers = self.equipe_A
         else:
             adversaires = self.equipe_A
+            coequipiers = self.equipe_B
 
+        # --- distances adversaires ---
         dists = []
         for adv in adversaires:
             dx = adv.position[0] - self.rebondeur.position[0]
@@ -100,9 +104,23 @@ class SituationBasket:
             dists.append((adv, d))
 
         dists_sorted = sorted(dists, key=lambda x: x[1])
-
         top3 = dists_sorted[:3]
 
+        # --- coéquipiers proches ---
+        rayon_proche = 1.0  
+        nb_coequipiers_proches = sum(
+            1 for coeq in coequipiers
+            if np.hypot(coeq.position[0] - self.rebondeur.position[0],
+                        coeq.position[1] - self.rebondeur.position[1]) <= rayon_proche
+        ) - 1
+
+        # --- distance au panier ---
+        panier_position = [1.6, LARGEUR_TERRAIN / 2]  # coord panier gauche
+        dxp = self.rebondeur.position[0] - panier_position[0]
+        dyp = self.rebondeur.position[1] - panier_position[1]
+        distance_joueur_panier = np.hypot(dxp, dyp)
+
+        # --- données de base ---
         data = {
             "id": self.rebondeur.id,
             "surname": self.rebondeur.nom,
@@ -110,7 +128,9 @@ class SituationBasket:
             "height": self.rebondeur.taille,
             "reb_avg": self.rebondeur.stat_rebond,
             "Temps_restant": self.format_temps(temps_restant),
-            "DiffScore": diff_score
+            "DiffScore": diff_score,
+            "DistanceJoueurPanier": distance_joueur_panier,
+            "NbCoequipiersProches": nb_coequipiers_proches
         }
 
         for i in range(3):
@@ -127,15 +147,47 @@ class SituationBasket:
                 data[key_rebond] = ""
                 data[key_dist] = ""
 
-        data["Label"] = self.rebondeur.taille * self.rebondeur.stat_rebond
+        # --- paramètres ---
+        alpha = 0.6
+        beta = 0.4
+        temps_match_basket = 48 * 60
+        S = 10.0
+        w1 = 0.4
+        w2 = 0.6 
+        min_rebond = 0.7
+        max_rebond = 1.3
 
+        # --- pression adverse ---
+        danger_total = 0
+        for adv, dist in dists:
+            avantage_physique_i = alpha * max(0, adv.taille - self.rebondeur.taille) \
+                                + beta * max(0, adv.stat_rebond - self.rebondeur.stat_rebond)
+            danger_i = avantage_physique_i / (1 + dist**2)
+            danger_total += danger_i
+
+        pression_adverse = danger_total / (1 + nb_coequipiers_proches)
+
+        facteur_score = max(0, 1.0 - (abs(diff_score) / S)**2)
+
+        facteur_importance = facteur_score * (temps_match_basket - temps_restant) / temps_match_basket
+
+        # --- score brut ---
+        score_brut = w1 * pression_adverse + w2 * facteur_importance
+
+        # --- Rebond final entre 0.7 et 1.3 via sigmoïde pour éviter saturation ---
+        # score_brut peut dépasser 1, on centre sur 0.5 pour la sigmoïde
+        rebond = min_rebond + (max_rebond - min_rebond) / (1 + np.exp(-5 * (score_brut - 0.5)))
+
+        data["Rebond"] = rebond
+
+        # --- sauvegarde ---
         df = pd.DataFrame([data])
-
         filename = 'situations.csv'
         file_exists = os.path.exists(filename)
         file_empty = (not file_exists) or (os.path.getsize(filename) == 0)
-
         df.to_csv(filename, mode='a', index=False, header=file_empty, sep=';')
+
+
 
 class InterfaceBasket:
     def __init__(self, equipe1, equipe2):
