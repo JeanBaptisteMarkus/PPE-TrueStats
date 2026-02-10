@@ -87,35 +87,28 @@ class SituationBasket:
         if self.rebondeur is None:
             return
 
-        # --- déterminer adversaires et coéquipiers ---
+        # --- déterminer adversaires ---
         if self.rebondeur.equipe == equipe1Nom:
             adversaires = self.equipe_B
-            coequipiers = self.equipe_A
         else:
             adversaires = self.equipe_A
-            coequipiers = self.equipe_B
 
-        # --- distances adversaires ---
+        # --- distances adversaires (<= 1m seulement) ---
+        rayon_proche = 1.0
         dists = []
         for adv in adversaires:
             dx = adv.position[0] - self.rebondeur.position[0]
             dy = adv.position[1] - self.rebondeur.position[1]
             d = np.hypot(dx, dy)
-            dists.append((adv, d))
+            if d <= rayon_proche:
+                dists.append((adv, d))
 
+        # --- 3 adversaires les plus proches ---
         dists_sorted = sorted(dists, key=lambda x: x[1])
         top3 = dists_sorted[:3]
 
-        # --- coéquipiers proches ---
-        rayon_proche = 1.0  
-        nb_coequipiers_proches = sum(
-            1 for coeq in coequipiers
-            if np.hypot(coeq.position[0] - self.rebondeur.position[0],
-                        coeq.position[1] - self.rebondeur.position[1]) <= rayon_proche
-        ) - 1
-
         # --- distance au panier ---
-        panier_position = [1.6, LARGEUR_TERRAIN / 2]  # coord panier gauche
+        panier_position = [1.6, LARGEUR_TERRAIN / 2]
         dxp = self.rebondeur.position[0] - panier_position[0]
         dyp = self.rebondeur.position[1] - panier_position[1]
         distance_joueur_panier = np.hypot(dxp, dyp)
@@ -129,8 +122,7 @@ class SituationBasket:
             "reb_avg": self.rebondeur.stat_rebond,
             "Temps_restant": self.format_temps(temps_restant),
             "DiffScore": diff_score,
-            "DistanceJoueurPanier": distance_joueur_panier,
-            "NbCoequipiersProches": nb_coequipiers_proches
+            "DistanceJoueurPanier": distance_joueur_panier
         }
 
         for i in range(3):
@@ -152,42 +144,52 @@ class SituationBasket:
         beta = 0.4
         temps_match_basket = 48 * 60
         S = 10.0
-        w1 = 0.4
-        w2 = 0.6 
+
+        # Poids (la pression locale compte plus)
+        w1 = 0.6
+        w2 = 0.4
+
         min_rebond = 0.7
         max_rebond = 1.3
 
-        # --- pression adverse ---
+        # --- pression adverse (uniquement adversaires proches) ---
         danger_total = 0
-        for adv, dist in dists:
-            avantage_physique_i = alpha * max(0, adv.taille - self.rebondeur.taille) \
-                                + beta * max(0, adv.stat_rebond - self.rebondeur.stat_rebond)
-            danger_i = avantage_physique_i / (1 + dist**2)
-            danger_total += danger_i
+        for adv, dist in top3:
+            avantage_physique = (
+                alpha * max(0, adv.taille - self.rebondeur.taille)
+                + beta * max(0, adv.stat_rebond - self.rebondeur.stat_rebond)
+            )
+            danger_total += avantage_physique / (1 + dist**2)
 
-        pression_adverse = danger_total / (1 + nb_coequipiers_proches)
+        # normalisation douce → pression ∈ [0, 1[
+        pression_adverse = danger_total / (1 + danger_total)
 
+        # --- importance du contexte ---
         facteur_score = max(0, 1.0 - (abs(diff_score) / S)**2)
+        facteur_importance = (
+            facteur_score * (temps_match_basket - temps_restant) / temps_match_basket
+        )
 
-        facteur_importance = facteur_score * (temps_match_basket - temps_restant) / temps_match_basket
-
-        # --- score brut ---
+        # --- score combiné ---
         score_brut = w1 * pression_adverse + w2 * facteur_importance
 
-        # --- Rebond final entre 0.7 et 1.3 via sigmoïde pour éviter saturation ---
-        # score_brut peut dépasser 1, on centre sur 0.5 pour la sigmoïde
-        rebond = min_rebond + (max_rebond - min_rebond) / (1 + np.exp(-5 * (score_brut - 0.5)))
+        # recentrage autour de 0 pour la sigmoïde
+        score_centre = score_brut - 0.5
+
+        # --- rebond final ---
+        rebond = min_rebond + (max_rebond - min_rebond) / (
+            1 + np.exp(-5 * score_centre)
+        )
 
         data["Rebond"] = rebond
 
+
         # --- sauvegarde ---
         df = pd.DataFrame([data])
-        filename = 'situations.csv'
+        filename = "situations.csv"
         file_exists = os.path.exists(filename)
         file_empty = (not file_exists) or (os.path.getsize(filename) == 0)
-        df.to_csv(filename, mode='a', index=False, header=file_empty, sep=';')
-
-
+        df.to_csv(filename, mode="a", index=False, header=file_empty, sep=";")
 
 class InterfaceBasket:
     def __init__(self, equipe1, equipe2):
