@@ -44,7 +44,8 @@ def choix_contexte_tkinter():
         menu_deroulant2['values'] = vals
         if menu_deroulant2.get() == sel:
             menu_deroulant2.set('')
-
+            
+    # Empecher la sélection de la même équipe dans les deux menus
     def on_select_team2(event=None):
         sel = menu_deroulant2.get()
         vals = [t for t in list(equipes_NBA.keys()) if t != sel]

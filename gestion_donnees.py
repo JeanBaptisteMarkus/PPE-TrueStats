@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Button
+from matplotlib.widgets import Button , TextBox, CheckButtons
 from def_equipe_joueur import Joueur
 from def_equipe_joueur import LARGEUR_TERRAIN
 
@@ -44,6 +44,7 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
 
     rebondeur = None  # Variable qui stockera le joueur sélectionné (initialement vide)
     RAYON_ADVERSAIRES = 2.0  # Rayon en mètres autour du rebondeur pour détecter les adversaires proches
+
 
     def valider_rebondeur(event):
         """
@@ -108,6 +109,10 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
             # abs() retourne la valeur absolue (toujours positive) de la différence entre les deux scores
             diff_score = abs(score_equipe1 - score_equipe2)
 
+            # Récupérer l'état de la checkbox "Rebond Offensif"
+            checkbox_status = checkbox.get_status()  # Retourne [True] ou [False]
+            rebond_offensif = 1 if checkbox_status[0] else 0  # Convertit le statut de la checkbox en 1 (si coché) ou 0 (si non coché)
+
             # ÉTAPE 6 : Créer un dictionnaire avec toutes les données à exporter 
             # Chaque clé sera le nom de la colonne dans Excel, chaque valeur est une liste (pour pandas)
             donnees = {
@@ -119,7 +124,9 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
                 'Moyenne_Rebond_Adversaires': [moyenne_rebond_adv],  # Moyenne rebonds des adversaires proches
                 'Distance_Panier_Rebondeur': [distance_panier_rebondeur],  # Distance du rebondeur au panier
                 'Diff_Score': [diff_score],  # Différence absolue de score entre les équipes
-                'Temps_Restant': [temps_restant]  # Temps restant dans le match en secondes
+                'Temps_Restant': [temps_restant], # Temps restant dans le match en secondes
+                'Rebond_Offensif': [rebond_offensif] # Indique si le rebond est offensif (1) ou défensif (0)
+                
             }
 
             # ÉTAPE 7 : Créer un DataFrame pandas avec la nouvelle ligne de données
@@ -150,6 +157,7 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
             # Si aucun joueur n'a été sélectionné avant de cliquer sur "Valider"
             print("Aucun joueur sélectionné. Veuillez cliquer sur un joueur avant de valider.")
 
+
     # CRÉATION DU BOUTON "VALIDER"
     ax_bouton = plt.axes([0.4, 0.02, 0.2, 0.05])
 
@@ -157,8 +165,11 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
     bouton = Button(ax_bouton, 'Valider')
 
     # on_clicked() connecte la fonction valider_rebondeur au bouton
-    # Quand l'utilisateur clique sur le bouton, valider_rebondeur() sera automatiquement appelée
-    bouton.on_clicked(valider_rebondeur)
+    bouton.on_clicked(valider_rebondeur) 
+
+    # CRÉATION DE LA CHECKBOX "Rebond Offensif"
+    ax_checkbox = plt.axes([0.35, 0.08, 0.3, 0.04])
+    checkbox = CheckButtons(ax_checkbox, ['Rebond Offensif'], [False])
 
     
     # plt.show() affiche la fenêtre matplotlib avec le terrain et le bouton
