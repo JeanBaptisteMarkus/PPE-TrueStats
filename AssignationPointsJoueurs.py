@@ -135,9 +135,9 @@ class SituationBasket:
                 data[key_rebond] = adv.stat_rebond
                 data[key_dist] = dist
             else:
-                data[key_taille] = ""
-                data[key_rebond] = ""
-                data[key_dist] = ""
+                data[key_taille] = np.nan
+                data[key_rebond] = np.nan
+                data[key_dist] = np.nan
 
         # --- paramètres ---
         alpha = 0.6
@@ -146,14 +146,16 @@ class SituationBasket:
         S = 10.0
 
         # Poids (la pression locale compte plus)
-        w1 = 0.6
-        w2 = 0.4
+        w1 = 0.7
+        w2 = 0.3
 
         min_rebond = 0.7
         max_rebond = 1.3
 
         # --- pression adverse (uniquement adversaires proches) ---
         danger_total = 0
+        pression_adverse = 0
+
         for adv, dist in top3:
             avantage_physique = (
                 alpha * max(0, adv.taille - self.rebondeur.taille)
@@ -215,7 +217,8 @@ class InterfaceBasket:
                                                 ha='center', fontsize=16, color='red', fontweight='bold')
 
         # Afficher score dans le titre
-        self.fig.suptitle(f"{equipe1} {self.score_equipe1}  —  {self.score_equipe2} {equipe2}", fontsize=16)
+        self.fig.suptitle(f"{equipe1Nom} {self.score_equipe1}  —  {self.score_equipe2} {equipe2Nom}",fontsize=16)
+
 
         self.draw_players()
         self.draw_remplacement_panel()
