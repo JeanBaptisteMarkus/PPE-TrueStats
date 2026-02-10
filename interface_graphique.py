@@ -17,6 +17,8 @@ def choix_contexte_tkinter():
     fenetre.title("Choix du contexte du match")
     fenetre.geometry("500x500")
 
+    
+
     # ***choix de la première équipe***
     ttk.Label(fenetre, text="Équipe 1 :").grid(row=0, column=0, padx=10, pady=10, sticky="w")
     menu_deroulant1 = ttk.Combobox(fenetre, values=list(equipes_NBA.keys()), state="readonly")
@@ -34,6 +36,24 @@ def choix_contexte_tkinter():
     ttk.Label(fenetre, text="Score équipe 2 :").grid(row=1, column=2, padx=10)
     choix_score_equipe2 = tk.Entry(fenetre, width=5)
     choix_score_equipe2.grid(row=1, column=3)
+
+    # Empêcher la sélection de la même équipe dans les deux menus
+    def on_select_team1(event=None):
+        sel = menu_deroulant1.get()
+        vals = [t for t in list(equipes_NBA.keys()) if t != sel]
+        menu_deroulant2['values'] = vals
+        if menu_deroulant2.get() == sel:
+            menu_deroulant2.set('')
+
+    def on_select_team2(event=None):
+        sel = menu_deroulant2.get()
+        vals = [t for t in list(equipes_NBA.keys()) if t != sel]
+        menu_deroulant1['values'] = vals
+        if menu_deroulant1.get() == sel:
+            menu_deroulant1.set('')
+
+    menu_deroulant1.bind('<<ComboboxSelected>>', on_select_team1)
+    menu_deroulant2.bind('<<ComboboxSelected>>', on_select_team2)
 
     # ***Choix du temps restant***
     ttk.Label(fenetre, text="Temps restant (en secondes) :").grid(row=2, column=0, padx=10, pady=10, sticky="w")

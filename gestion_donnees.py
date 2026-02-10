@@ -4,6 +4,7 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 from def_equipe_joueur import Joueur
+from def_equipe_joueur import LARGEUR_TERRAIN
 
 
 def charger_joueurs(nom_fichier):
@@ -86,6 +87,12 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
             taille_rebondeur = rebondeur.taille  # Taille du rebondeur en cm (provient du fichier InfosJoueurs)
             stat_rebond_rebondeur = rebondeur.stat_rebond  # Moyenne de rebonds du joueur (AverageRebond)
 
+            #position du panier
+            x_panier=1.6
+            y_panier=LARGEUR_TERRAIN/2
+            # calcul de la distance du rebondeur au panier
+            distance_panier_rebondeur = np.hypot(x_panier - x_reb, y_panier - y_reb)
+
             # ÉTAPE 4 : Calculer les moyennes des adversaires proches 
             if nb_adversaires > 0:
                 # S'il y a au moins un adversaire proche, calculer les moyennes de leurs statistiques
@@ -110,6 +117,7 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
                 'Moyenne_Taille_Adversaires': [moyenne_taille_adv],  # Moyenne des tailles des adversaires proches
                 'Stat_Rebond_Rebondeur': [stat_rebond_rebondeur],  # Moyenne rebonds du rebondeur
                 'Moyenne_Rebond_Adversaires': [moyenne_rebond_adv],  # Moyenne rebonds des adversaires proches
+                'Distance_Panier_Rebondeur': [distance_panier_rebondeur],  # Distance du rebondeur au panier
                 'Diff_Score': [diff_score],  # Différence absolue de score entre les équipes
                 'Temps_Restant': [temps_restant]  # Temps restant dans le match en secondes
             }
