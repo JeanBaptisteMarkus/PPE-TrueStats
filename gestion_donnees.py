@@ -43,7 +43,8 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
     """
 
     rebondeur = None  # Variable qui stockera le joueur sélectionné (initialement vide)
-    RAYON_ADVERSAIRES = 2.0  # Rayon en mètres autour du rebondeur pour détecter les adversaires proches
+    RAYON_ADVERSAIRES_2M = 2.0  # Rayon en mètres autour du rebondeur pour détecter les adversaires proches
+    RAYON_ADVERSAIRES_1M=1.0 # Rayon en mètres autour du rebondeur pour détecter les adversaires très proches
 
 
     def valider_rebondeur(event):
@@ -67,9 +68,10 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
             else:
                 adversaires = gestionnaire.joueurs_equipe1  # Sinon, adversaires = équipe 1
 
-            # ÉTAPE 2 : Trouver les adversaires proches du rebondeur 
-            # On cherche tous les adversaires situés dans un rayon de 2 mètres autour du rebondeur
-            adversaires_proches = []  # Liste vide pour stocker les adversaires dans le rayon
+            # ÉTAPE 2 : Trouver les adversaires proches du rebondeur
+            # On cherche tous les adversaires situés dans un rayon de 1m et 2 mètres autour du rebondeur
+            adversaires_proches_1m = []  # Liste vide pour stocker les adversaires dans le rayon de 1 mètre
+            adversaires_proches_2m = []  # Liste vide pour stocker les adversaires dans le rayon de 2 mètres
             x_reb, y_reb = rebondeur.position  # Récupérer les coordonnées (x, y) du rebondeur sur le terrain
 
             # Parcourir chaque adversaire pour calculer sa distance par rapport au rebondeur
@@ -78,12 +80,17 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
                 # Calculer la distance euclidienne entre le rebondeur et l'adversaire
                 distance = np.hypot(x_reb - x_adv, y_reb - y_adv)
 
-                # Si la distance est inférieure ou égale au rayon, l'adversaire est "proche"
-                if distance <= RAYON_ADVERSAIRES:
-                    adversaires_proches.append(adv)  # Ajouter cet adversaire à la liste
+                # Ajouter à la liste 1m si distance <= 1m
+                if distance <= RAYON_ADVERSAIRES_1M:
+                    adversaires_proches_1m.append(adv)
+
+                # Ajouter à la liste 2m si 1m <=distance <= 2m
+                if RAYON_ADVERSAIRES_1M <= distance <= RAYON_ADVERSAIRES_2M:
+                    adversaires_proches_2m.append(adv)
 
             # ÉTAPE 3 : Extraire les statistiques du rebondeur
-            nb_adversaires = len(adversaires_proches)  # Compter combien d'adversaires sont dans le rayon
+            nb_adversaires_1m = len(adversaires_proches_1m)  # Compter combien d'adversaires sont dans le rayon de 1m
+            nb_adversaires_2m = len(adversaires_proches_2m)  # Compter combien d'adversaires sont dans le rayon de 2m
             nom_rebondeur = f"{rebondeur.prenom} {rebondeur.nom}"  # Créer le nom complet
             taille_rebondeur = rebondeur.taille  # Taille du rebondeur en cm (provient du fichier InfosJoueurs)
             stat_rebond_rebondeur = rebondeur.stat_rebond  # Moyenne de rebonds du joueur (AverageRebond)
@@ -95,15 +102,25 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
             distance_panier_rebondeur = np.hypot(x_panier - x_reb, y_panier - y_reb)
 
             # ÉTAPE 4 : Calculer les moyennes des adversaires proches 
-            if nb_adversaires > 0:
+            if nb_adversaires_1m > 0:
                 # S'il y a au moins un adversaire proche, calculer les moyennes de leurs statistiques
                 # np.mean() calcule la moyenne arithmétique d'une liste de nombres
-                moyenne_taille_adv = np.mean([adv.taille for adv in adversaires_proches])
-                moyenne_rebond_adv = np.mean([adv.stat_rebond for adv in adversaires_proches])
+                moyenne_taille_adv = np.mean([adv.taille for adv in adversaires_proches_1m])
+                moyenne_rebond_adv = np.mean([adv.stat_rebond for adv in adversaires_proches_1m])
             else:
                 # S'il n'y a aucun adversaire proche, on met les moyennes à 0
                 moyenne_taille_adv = 0
                 moyenne_rebond_adv = 0
+
+            if nb_adversaires_2m > 0:
+                # S'il y a au moins un adversaire proche, calculer les moyennes de leurs statistiques
+                # np.mean() calcule la moyenne arithmétique d'une liste de nombres
+                moyenne_taille_adv_2m = np.mean([adv.taille for adv in adversaires_proches_2m])
+                moyenne_rebond_adv_2m = np.mean([adv.stat_rebond for adv in adversaires_proches_2m])
+            else:
+                # S'il n'y a aucun adversaire proche, on met les moyennes à 0
+                moyenne_taille_adv_2m = 0
+                moyenne_rebond_adv_2m = 0
 
             # ÉTAPE 5 : Calculer la différence de score 
             # abs() retourne la valeur absolue (toujours positive) de la différence entre les deux scores
@@ -113,20 +130,22 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
             checkbox_status = checkbox.get_status()  # Retourne [True] ou [False]
             rebond_offensif = 1 if checkbox_status[0] else 0  # Convertit le statut de la checkbox en 1 (si coché) ou 0 (si non coché)
 
-            # ÉTAPE 6 : Créer un dictionnaire avec toutes les données à exporter 
+            # ÉTAPE 6 : Créer un dictionnaire avec toutes les données à exporter
             # Chaque clé sera le nom de la colonne dans Excel, chaque valeur est une liste (pour pandas)
             donnees = {
                 'Nom_Rebondeur': [nom_rebondeur],  # Nom complet du joueur
                 'Taille_Rebondeur': [taille_rebondeur],  # Taille en cm
-                'Nb_Adversaires_Rayon': [nb_adversaires],  # Nombre d'adversaires dans 2m
-                'Moyenne_Taille_Adversaires': [moyenne_taille_adv],  # Moyenne des tailles des adversaires proches
+                'Nb_Adversaires_1M': [nb_adversaires_1m],  # Nombre d'adversaires dans 1m
+                'Nb_Adversaires_2M': [nb_adversaires_2m],  # Nombre d'adversaires dans 2m
+                'Moyenne_Taille_Adversaires_1M': [moyenne_taille_adv],  # Moyenne tailles adversaires 1m
+                'Moyenne_Rebond_Adversaires_1M': [moyenne_rebond_adv],  # Moyenne rebonds adversaires 1m
+                'Moyenne_Taille_Adversaires_2M': [moyenne_taille_adv_2m],  # Moyenne tailles adversaires 2m
+                'Moyenne_Rebond_Adversaires_2M': [moyenne_rebond_adv_2m],  # Moyenne rebonds adversaires 2m
                 'Stat_Rebond_Rebondeur': [stat_rebond_rebondeur],  # Moyenne rebonds du rebondeur
-                'Moyenne_Rebond_Adversaires': [moyenne_rebond_adv],  # Moyenne rebonds des adversaires proches
                 'Distance_Panier_Rebondeur': [distance_panier_rebondeur],  # Distance du rebondeur au panier
                 'Diff_Score': [diff_score],  # Différence absolue de score entre les équipes
                 'Temps_Restant': [temps_restant], # Temps restant dans le match en secondes
                 'Rebond_Offensif': [rebond_offensif] # Indique si le rebond est offensif (1) ou défensif (0)
-                
             }
 
             # ÉTAPE 7 : Créer un DataFrame pandas avec la nouvelle ligne de données
