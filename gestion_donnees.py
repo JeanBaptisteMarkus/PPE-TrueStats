@@ -45,7 +45,7 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
     rebondeur = None  # Variable qui stockera le joueur sélectionné (initialement vide)
     RAYON_ADVERSAIRES_2M = 2.0  # Rayon en mètres autour du rebondeur pour détecter les adversaires proches
     RAYON_ADVERSAIRES_1M=1.0 # Rayon en mètres autour du rebondeur pour détecter les adversaires très proches
-
+    RAYON_RATIO = 3.0 # Rayon pour calculer le ratio adversaires/coequipiers
 
     def valider_rebondeur(event):
         """
@@ -65,13 +65,17 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
             # Déterminer si le rebondeur est dans l'équipe 1 ou 2, afin de savoir qui sont ses adversaires
             if rebondeur in gestionnaire.joueurs_equipe1:
                 adversaires = gestionnaire.joueurs_equipe2  # Si équipe 1, alors adversaires = équipe 2
+                coequipiers = gestionnaire.joueurs_equipe1  # Coéquipiers = équipe 1
             else:
                 adversaires = gestionnaire.joueurs_equipe1  # Sinon, adversaires = équipe 1
+                coequipiers = gestionnaire.joueurs_equipe2  # Coéquipiers = équipe 2
 
             # ÉTAPE 2 : Trouver les adversaires proches du rebondeur
             # On cherche tous les adversaires situés dans un rayon de 1m et 2 mètres autour du rebondeur
             adversaires_proches_1m = []  # Liste vide pour stocker les adversaires dans le rayon de 1 mètre
             adversaires_proches_2m = []  # Liste vide pour stocker les adversaires dans le rayon de 2 mètres
+            adversaires_ratio = [] # Liste pour stocker les adversaires dans le rayon de 3 mètres (pour calcul du ratio)
+            coequipiers_ratio = [] # Liste pour stocker les coéquipiers dans le rayon de 3 mètres (pour calcul du ratio)
             x_reb, y_reb = rebondeur.position  # Récupérer les coordonnées (x, y) du rebondeur sur le terrain
 
             # Parcourir chaque adversaire pour calculer sa distance par rapport au rebondeur
@@ -87,6 +91,24 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
                 # Ajouter à la liste 2m si 1m <=distance <= 2m
                 if RAYON_ADVERSAIRES_1M <= distance <= RAYON_ADVERSAIRES_2M:
                     adversaires_proches_2m.append(adv)
+
+                
+            for adv in adversaires:
+                x_adv, y_adv = adv.position  # Récupérer les coordonnées (x, y) de l'adversaire
+                distance = np.hypot(x_reb - x_adv, y_reb - y_adv)  # Calculer la distance euclidienne
+
+                if distance <= RAYON_RATIO:
+                    adversaires_ratio.append(adv)
+
+            for coeq in coequipiers:
+                x_coeq, y_coeq = coeq.position  # Récupérer les coordonnées (x, y) du coéquipier
+                distance = np.hypot(x_reb - x_coeq, y_reb - y_coeq)  # Calculer la distance euclidienne
+
+                if distance <= RAYON_RATIO:
+                    coequipiers_ratio.append(coeq)
+
+            # Calcul ratio :
+            ratio = len(adversaires_ratio) / len(coequipiers_ratio)  # Ajouter une petite valeur pour éviter la division par zéro
 
             # ÉTAPE 3 : Extraire les statistiques du rebondeur
             nb_adversaires_1m = len(adversaires_proches_1m)  # Compter combien d'adversaires sont dans le rayon de 1m
@@ -139,6 +161,7 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
                 'Nb_Adversaires_2M': [nb_adversaires_2m],
                 'Stat_Rebond_Rebondeur': [stat_rebond_rebondeur],
                 'Distance_Panier_Rebondeur': [distance_panier_rebondeur],
+                'Ratio_Adversaires_Coequipiers': [ratio],
                 'Diff_Score': [diff_score],
                 'Temps_Restant': [temps_restant],
                 'Rebond_Offensif': [rebond_offensif]
