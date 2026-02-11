@@ -37,7 +37,7 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
         # Identifier les adversaires de l'équipe opposée
         adversaires = gestionnaire.joueurs_equipe2 if rebondeur in gestionnaire.joueurs_equipe1 else gestionnaire.joueurs_equipe1
 
-        # Calculer la distance entre le joueur et les adversaires pour determiner si ils sont a 1M ou 2M du joueur
+        # Calculer la distance entre le joueur et les adversaires
         x_reb, y_reb = rebondeur.position
         adversaires_proches_1m, adversaires_proches_2m = [], []
         for adv in adversaires:
@@ -55,39 +55,32 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
         x_panier, y_panier = 1.6, LARGEUR_TERRAIN / 2
         distance_panier_rebondeur = np.hypot(x_panier - x_reb, y_panier - y_reb)
 
-        # Fonction pour calculer la moyenne d'un attribut pour une liste de joueurs
-        def moyenne(liste, attr):
-            return np.mean([getattr(j, attr) for j in liste]) if liste else 0
-
-        nb_adversaires_1m = len(adversaires_proches_1m)
-        nb_adversaires_2m = len(adversaires_proches_2m)
-        moyenne_taille_adv_1m = moyenne(adversaires_proches_1m, "taille")
-        moyenne_rebond_adv_1m = moyenne(adversaires_proches_1m, "stat_rebond")
-        moyenne_taille_adv_2m = moyenne(adversaires_proches_2m, "taille")
-        moyenne_rebond_adv_2m = moyenne(adversaires_proches_2m, "stat_rebond")
-
         # Différence de score entre les équipes
         diff_score = abs(score_equipe1 - score_equipe2)
 
         # Récupérer l'état de la checkbox "Rebond Offensif"
         rebond_offensif = 1 if checkbox.get_status()[0] else 0
 
-        # Créer un dictionnaire avec toutes les données à exporter
+        # Créer un dictionnaire avec les données du rebondeur
         donnees = {
             'Nom_Rebondeur': [nom_rebondeur],
             'Taille_Rebondeur': [taille_rebondeur],
-            'Nb_Adversaires_1M': [nb_adversaires_1m],
-            'Nb_Adversaires_2M': [nb_adversaires_2m],
-            'Moyenne_Taille_Adversaires_1M': [moyenne_taille_adv_1m],
-            'Moyenne_Rebond_Adversaires_1M': [moyenne_rebond_adv_1m],
-            'Moyenne_Taille_Adversaires_2M': [moyenne_taille_adv_2m],
-            'Moyenne_Rebond_Adversaires_2M': [moyenne_rebond_adv_2m],
             'Stat_Rebond_Rebondeur': [stat_rebond_rebondeur],
             'Distance_Panier_Rebondeur': [distance_panier_rebondeur],
             'Diff_Score': [diff_score],
             'Temps_Restant': [temps_restant],
-            'Rebond_Offensif': [rebond_offensif]
+            'Rebond_Offensif': [rebond_offensif],
         }
+
+        # Fonction pour ajouter les adversaires pour un rayon donné
+        def ajouter_adversaires(adversaires_liste, rayon_m):
+            for i, adv in enumerate(adversaires_liste, start=1):
+                donnees[f'rayon_{int(rayon_m)}M_adv{i}_taille'] = [adv.taille]
+                donnees[f'rayon_{int(rayon_m)}M_adv{i}_reb_avg'] = [adv.stat_rebond]
+
+        # Ajouter les adversaires proches
+        ajouter_adversaires(adversaires_proches_1m, RAYON_ADVERSAIRES_1M)
+        ajouter_adversaires(adversaires_proches_2m, RAYON_ADVERSAIRES_2M)
 
         df_nouvelle_ligne = pd.DataFrame(donnees)
 
