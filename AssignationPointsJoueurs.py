@@ -8,23 +8,17 @@ from matplotlib.patches import Arc
 import os
 import matplotlib.animation as animation
 
-
 LONGUEUR_TERRAIN = 14.325
 LARGEUR_TERRAIN = 15.24
-
 
 # Équipes choisies
 equipe1Nom = "DallasMavericks"
 equipe2Nom = "LosAngelesLakers"
 
-
 prefix_equipe = {
     "DallasMavericks": "DAL",
     "LosAngelesLakers": "LAL",
 }
-
-
-
 
 class Joueur:
     def __init__(self, joueur_id, nom, prenom, taille, stat_rebond, equipe):
@@ -36,35 +30,26 @@ class Joueur:
         self.equipe = equipe
         self.position = [0.0, 0.0]
 
-
-
-
 class SituationBasket:
     def __init__(self, equipe1, equipe2):
         self.tous_joueurs_A = self.charger_tous_joueurs(equipe1)
         self.tous_joueurs_B = self.charger_tous_joueurs(equipe2)
 
-
         self.equipe_A = random.sample(self.tous_joueurs_A, min(5, len(self.tous_joueurs_A)))
         self.equipe_B = random.sample(self.tous_joueurs_B, min(5, len(self.tous_joueurs_B)))
-
 
         for joueur in self.equipe_A + self.equipe_B:
             joueur.position = [
                 random.uniform(0, LONGUEUR_TERRAIN),
                 random.uniform(0, LARGEUR_TERRAIN)
             ]
-
-
         self.rebondeur = None
-
 
     def charger_tous_joueurs(self, equipe_nom):
         joueurs = []
         prefix = prefix_equipe.get(equipe_nom)
         if prefix is None:
             raise ValueError(f"Préfixe inconnu pour l'équipe {equipe_nom}")
-
 
         with open('InfosJoueurs', newline='', encoding='utf-8') as f:
             attributs = csv.DictReader(f, delimiter=',')
@@ -81,7 +66,6 @@ class SituationBasket:
                     joueurs.append(joueur)
         return joueurs
 
-
     def remplacer_joueur(self, joueur_a_remplacer, nouveau_joueur):
         if joueur_a_remplacer.equipe == equipe1Nom:
             idx = self.equipe_A.index(joueur_a_remplacer)
@@ -91,24 +75,20 @@ class SituationBasket:
             self.equipe_B[idx] = nouveau_joueur
         nouveau_joueur.position = joueur_a_remplacer.position
 
-
     def format_temps(self, secondes):
         m = secondes // 60
         s = secondes % 60
         return f"{m:02d}:{s:02d}"
 
-
     def enregistrer_situation(self, temps_restant, diff_score):
         if self.rebondeur is None:
             return
-
 
         # --- déterminer adversaires ---
         if self.rebondeur.equipe == equipe1Nom:
             adversaires = self.equipe_B
         else:
             adversaires = self.equipe_A
-
 
         # --- distances adversaires (<= 1m seulement) ---
         rayon_proche = 1.0
@@ -120,18 +100,15 @@ class SituationBasket:
             if d <= rayon_proche:
                 dists.append((adv, d))
 
-
         # --- 3 adversaires les plus proches ---
         dists_sorted = sorted(dists, key=lambda x: x[1])
         top3 = dists_sorted[:3]
-
 
         # --- distance au panier ---
         panier_position = [1.6, LARGEUR_TERRAIN / 2]
         dxp = self.rebondeur.position[0] - panier_position[0]
         dyp = self.rebondeur.position[1] - panier_position[1]
         distance_joueur_panier = np.hypot(dxp, dyp)
-
 
         # --- données de base ---
         data = {
@@ -144,7 +121,6 @@ class SituationBasket:
             "DiffScore": diff_score,
             "DistanceJoueurPanier": distance_joueur_panier
         }
-
 
         for i in range(3):
             key_taille = f"tailleAdversaire{i+1}"
@@ -160,27 +136,22 @@ class SituationBasket:
                 data[key_rebond] = np.nan
                 data[key_dist] = np.nan
 
-
         # --- paramètres ---
         alpha = 0.6
         beta = 0.4
         temps_match_basket = 48 * 60
         S = 10.0
 
-
         # Poids (la pression locale compte plus)
         w1 = 0.7
         w2 = 0.3
 
-
         min_rebond = 0.7
         max_rebond = 1.3
-
 
         # --- pression adverse (uniquement adversaires proches) ---
         danger_total = 0
         pression_adverse = 0
-
 
         for adv, dist in top3:
             avantage_physique = (
@@ -189,10 +160,8 @@ class SituationBasket:
             )
             danger_total += avantage_physique / (1 + dist**2)
 
-
         # normalisation douce → pression ∈ [0, 1[
         pression_adverse = danger_total / (1 + danger_total)
-
 
         # --- importance du contexte ---
         facteur_score = max(0, 1.0 - (abs(diff_score) / S)**2)
@@ -200,25 +169,15 @@ class SituationBasket:
             facteur_score * (temps_match_basket - temps_restant) / temps_match_basket
         )
 
-
         # --- score combiné ---
         score_brut = w1 * pression_adverse + w2 * facteur_importance
-
 
         # recentrage autour de 0 pour la sigmoïde
         score_centre = score_brut - 0.5
 
-
         # --- rebond final ---
-        rebond = min_rebond + (max_rebond - min_rebond) / (
-            1 + np.exp(-5 * score_centre)
-        )
-
-
+        rebond = min_rebond + (max_rebond - min_rebond) / (1 + np.exp(-5 * score_centre))
         data["Rebond"] = rebond
-
-
-
 
         # --- sauvegarde ---
         df = pd.DataFrame([data])
@@ -227,57 +186,36 @@ class SituationBasket:
         file_empty = (not file_exists) or (os.path.getsize(filename) == 0)
         df.to_csv(filename, mode="a", index=False, header=file_empty, sep=";")
 
-
 class InterfaceBasket:
     def __init__(self, equipe1, equipe2):
         self.situation = SituationBasket(equipe1, equipe2)
-
-
         self.fig = plt.figure(figsize=(12, 6))
         self.ax_terrain = self.fig.add_subplot(1, 2, 1)
         self.ax_remplacement = self.fig.add_subplot(1, 2, 2)
-
-
         self.selected_joueur = None
         self.dragging = False
-
-
         # Scores aléatoires pour les deux équipes
         self.score_equipe1 = random.randint(60, 100)
         self.score_equipe2 = random.randint(60, 100)
-
-
         dessiner_terrain(self.ax_terrain)
-
-
         # Timer
         self.temps_restant = 90
         self.texte_timer = self.ax_terrain.text(LONGUEUR_TERRAIN/2, LARGEUR_TERRAIN + 0.6,
                                                 self.situation.format_temps(self.temps_restant),
                                                 ha='center', fontsize=16, color='red', fontweight='bold')
-
-
         # Afficher score dans le titre
         self.fig.suptitle(f"{equipe1Nom} {self.score_equipe1}  —  {self.score_equipe2} {equipe2Nom}",fontsize=16)
-
-
-
-
         self.draw_players()
         self.draw_remplacement_panel()
-
 
         self.fig.canvas.mpl_connect('button_press_event', self.on_click)
         self.fig.canvas.mpl_connect('motion_notify_event', self.on_drag)
         self.fig.canvas.mpl_connect('button_release_event', self.on_release)
         self.fig.canvas.mpl_connect('pick_event', self.on_pick_remplacant)
 
-
         self.fig.canvas.manager.set_window_title('Placement joueurs & remplacement')
 
-
         self.ani = animation.FuncAnimation(self.fig, self.update_timer, interval=1000, cache_frame_data=False)
-
 
     def update_timer(self, frame):
         if self.temps_restant <= 0:
@@ -288,12 +226,10 @@ class InterfaceBasket:
             plt.close(self.fig)
             return
 
-
         # Décrémenter
         self.temps_restant -= 1
         self.texte_timer.set_text(self.situation.format_temps(self.temps_restant))
         self.fig.canvas.draw_idle()
-
 
     def draw_players(self):
         self.ax_terrain.clear()
@@ -307,19 +243,16 @@ class InterfaceBasket:
             self.ax_terrain.scatter(x, y, s=taille, c=couleur, edgecolors=bord, linewidths=2, zorder=5)
             self.ax_terrain.text(x, y + 0.4, f"{joueur.prenom} {joueur.nom}", ha='center', fontsize=8, zorder=10)
 
-
         # Réécrire le texte timer après le clear
         self.texte_timer = self.ax_terrain.text(LONGUEUR_TERRAIN/2, LARGEUR_TERRAIN + 0.6,
                                                 self.situation.format_temps(self.temps_restant),
                                                 ha='center', fontsize=16, color='red', fontweight='bold')
-
 
         self.ax_terrain.set_xlim(-1, LONGUEUR_TERRAIN + 1)
         self.ax_terrain.set_ylim(-1, LARGEUR_TERRAIN + 1)
         self.ax_terrain.set_aspect('equal')
         self.ax_terrain.axis('off')
         self.fig.canvas.draw_idle()
-
 
     def draw_remplacement_panel(self):
         self.ax_remplacement.clear()
@@ -332,7 +265,6 @@ class InterfaceBasket:
         else:
             tous = self.situation.tous_joueurs_B
             sur_terrain = self.situation.equipe_B
-
 
         remplaçants = [j for j in tous if j not in sur_terrain]
         if not remplaçants:
@@ -348,7 +280,6 @@ class InterfaceBasket:
             if y < 0:
                 break
         self.fig.canvas.draw_idle()
-
 
     def on_click(self, event):
         if event.inaxes == self.ax_terrain:
@@ -367,7 +298,6 @@ class InterfaceBasket:
             self.selected_joueur = None
             self.draw_players()
             self.draw_remplacement_panel()
-
 
     def on_pick_remplacant(self, event):
         if isinstance(event.artist, plt.Text):
@@ -390,7 +320,6 @@ class InterfaceBasket:
                     self.draw_remplacement_panel()
                     break
 
-
     def on_drag(self, event):
         if not self.dragging or self.selected_joueur is None or event.inaxes != self.ax_terrain:
             return
@@ -400,19 +329,14 @@ class InterfaceBasket:
         self.selected_joueur.position = [x_new, y_new]
         self.draw_players()
 
-
     def on_release(self, event):
         self.dragging = False
-
 
     def run(self):
         plt.show()
         # À la fermeture manuelle, on peut décider d’enregistrer aussi :
         diff = self.score_equipe1 - self.score_equipe2
         self.situation.enregistrer_situation(self.temps_restant, diff)
-
-
-
 
 def dessiner_terrain(ax):
     ax.plot([0, LONGUEUR_TERRAIN, LONGUEUR_TERRAIN, 0, 0],
@@ -429,9 +353,6 @@ def dessiner_terrain(ax):
     ax.add_patch(cercle_raquette)
     panier = plt.Circle((1.6, LARGEUR_TERRAIN / 2), 0.225, fill=False, color='orange')
     ax.add_patch(panier)
-
-
-
 
 if __name__ == "__main__":
     interface = InterfaceBasket(equipe1Nom, equipe2Nom)
