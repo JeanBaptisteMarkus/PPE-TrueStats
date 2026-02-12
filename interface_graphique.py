@@ -93,6 +93,13 @@ def choix_contexte_tkinter():
 
         fenetre.destroy()  # Ferme la fenêtre après la sélection
 
+    #Gérer la fermeture de la fenêtre
+    def fermeture_fenetre():
+        fenetre.destroy()
+        import sys 
+        sys.exit(0)
+    fenetre.protocol("WM_DELETE_WINDOW", fermeture_fenetre) # Gérer la fermeture de la fenêtre    
+
     tk.Button(fenetre, text="Valider", command=valider_choix).grid(row=3, column=0, columnspan=4, pady=20)
     fenetre.mainloop()
     return equipe1, equipe2, score_equipe1, score_equipe2, temps_restant
