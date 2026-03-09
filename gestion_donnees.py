@@ -7,6 +7,213 @@ from def_equipe_joueur import Joueur
 from def_equipe_joueur import LARGEUR_TERRAIN
 
 
+def clamp(x, a, b): #Force la valeur du rebond à rester dans l'intervalle
+    return max(a, min(b, x))
+
+
+def valeur_rebond_defensif(
+    TailleRebondeur,
+    Moyenne_Rebond_rebondeur,
+    Taille_adversaires_1m,
+    Taille_adversaires_2m,
+    Moyenne_Reb_adv_1m,
+    Moyenne_Reb_adv_2m,
+    DiffScore,
+    TempsRestant,
+    DistBallePanier,
+    Ratio
+):
+
+    difficulty = 0
+    ease = 0
+    clutch = 0
+
+    nb1 = len(Taille_adversaires_1m)
+    nb2 = len(Taille_adversaires_2m)
+
+    # -------------------
+    # DIFFICULTÉ
+    # -------------------
+
+    difficulty += nb1 * 0.12
+    difficulty += nb2 * 0.04
+
+    for adv in Taille_adversaires_1m:
+        diff = adv - TailleRebondeur
+        if diff > 0:
+            difficulty += diff * 0.002
+
+    for adv in Moyenne_Reb_adv_1m:
+        diff = adv - Moyenne_Rebond_rebondeur
+        if diff > 0:
+            difficulty += diff * 0.015
+
+    # -------------------
+    # FACILITÉ
+    # -------------------
+
+    # aucun adversaire proche
+    if nb1 == 0 and nb2 == 0:
+        ease += 0.20
+
+    # avantage taille
+    for adv in Taille_adversaires_1m + Taille_adversaires_2m:
+        diff = TailleRebondeur - adv
+        if diff > 0:
+            ease += diff * 0.0015
+
+    # avantage stats
+    for adv in Moyenne_Reb_adv_1m + Moyenne_Reb_adv_2m:
+        diff = Moyenne_Rebond_rebondeur - adv
+        if diff > 0:
+            ease += diff * 0.02
+
+    # rebond long (plus chanceux)
+    if DistBallePanier > 4:
+        ease += (DistBallePanier - 4) * 0.015
+
+    # ratio favorable (beaucoup de coéquipiers)
+    if Ratio < 1:
+        ease += (1 - Ratio) * 0.03
+
+    # -------------------
+    # CLUTCH
+    # -------------------
+
+    clutch_flag = False
+
+    if abs(DiffScore) <= 6 and TempsRestant <= 60:
+        clutch_flag = True
+
+        if DiffScore > 0:
+            clutch += 0.10
+        elif DiffScore < 0 and TempsRestant <= 5:
+            clutch += 0.02
+        else:
+            clutch += 0.05
+
+    # -------------------
+    # CALCUL FINAL
+    # -------------------
+
+    value = 1 + difficulty + clutch - ease
+
+    if clutch_flag:
+        value = max(value, 1.0)
+
+    if nb1 >= 1:
+        value = max(value, 1.0)
+
+    return round(clamp(value, 0.7, 1.3), 3)
+
+
+def valeur_rebond_offensif(
+    TailleRebondeur,
+    Moyenne_Rebond_rebondeur,
+    Taille_adversaires_1m,
+    Taille_adversaires_2m,
+    Moyenne_Reb_adv_1m,
+    Moyenne_Reb_adv_2m,
+    DiffScore,
+    TempsRestant,
+    DistBallePanier,
+    Ratio
+):
+
+    difficulty = 0
+    ease = 0
+    clutch = 0
+
+    nb1 = len(Taille_adversaires_1m)
+    nb2 = len(Taille_adversaires_2m)
+
+    # -------------------
+    # DIFFICULTÉ
+    # -------------------
+
+    difficulty += nb1 * 0.12
+    difficulty += nb2 * 0.04
+
+    for adv in Taille_adversaires_1m:
+        diff = adv - TailleRebondeur
+        if diff > 0:
+            difficulty += diff * 0.002
+
+    for adv in Taille_adversaires_2m:
+        diff = adv - TailleRebondeur
+        if diff > 0:
+            difficulty += diff * 0.001
+
+    for adv in Moyenne_Reb_adv_1m:
+        diff = adv - Moyenne_Rebond_rebondeur
+        if diff > 0:
+            difficulty += diff * 0.015
+
+    for adv in Moyenne_Reb_adv_2m:
+        diff = adv - Moyenne_Rebond_rebondeur
+        if diff > 0:
+            difficulty += diff * 0.008
+
+    # -------------------
+    # FACILITÉ
+    # -------------------
+
+    if nb1 == 0 and nb2 == 0:
+        ease += 0.20
+
+    for adv in Taille_adversaires_1m + Taille_adversaires_2m:
+        diff = TailleRebondeur - adv
+        if diff > 0:
+            ease += diff * 0.0015
+
+    for adv in Moyenne_Reb_adv_1m + Moyenne_Reb_adv_2m:
+        diff = Moyenne_Rebond_rebondeur - adv
+        if diff > 0:
+            ease += diff * 0.02
+
+    if DistBallePanier > 4:
+        ease += (DistBallePanier - 4) * 0.015
+
+    if Ratio < 1:
+        ease += (1 - Ratio) * 0.03
+
+    # -------------------
+    # BONUS OFFENSIF STRUCTUREL
+    # -------------------
+
+    difficulty += 0.07
+
+    # -------------------
+    # CLUTCH
+    # -------------------
+
+    clutch_flag = False
+
+    if abs(DiffScore) <= 6 and TempsRestant <= 60:
+        clutch_flag = True
+
+        if DiffScore < 0 and TempsRestant <= 5:
+            clutch += 0.18
+        elif DiffScore < 0:
+            clutch += 0.12
+        else:
+            clutch += 0.08
+
+    # -------------------
+    # CALCUL FINAL
+    # -------------------
+
+    value = 1 + difficulty + clutch - ease
+
+    if clutch_flag:
+        value = max(value, 1.0)
+
+    if nb1 >= 1:
+        value = max(value, 1.0)
+
+    return round(clamp(value, 0.7, 1.3), 3)
+
+
 def charger_joueurs(nom_fichier):
     """Fonction pour charger les joueurs depuis un fichier CSV"""
     df = pd.read_csv(nom_fichier)
@@ -108,7 +315,7 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
                     coequipiers_ratio.append(coeq)
 
             # Calcul ratio :
-            ratio = len(adversaires_ratio) / len(coequipiers_ratio)  # Ajouter une petite valeur pour éviter la division par zéro
+            ratio = len(adversaires_ratio) / max(len(coequipiers_ratio), 1)  # Éviter division par zéro
 
             # ÉTAPE 3 : Extraire les statistiques du rebondeur
             nb_adversaires_1m = len(adversaires_proches_1m)  # Compter combien d'adversaires sont dans le rayon de 1m
@@ -145,12 +352,49 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
                 rebonds_adv_2m.append("")
 
             # ÉTAPE 5 : Calculer la différence de score 
-            # abs() retourne la valeur absolue (toujours positive) de la différence entre les deux scores
-            diff_score = abs(score_equipe1 - score_equipe2)
+            # DiffScore signé : positif si l'équipe du rebondeur mène, négatif si elle est menée
+            if rebondeur in gestionnaire.joueurs_equipe1:
+                DiffScore = score_equipe1 - score_equipe2
+            else:
+                DiffScore = score_equipe2 - score_equipe1
 
             # Récupérer l'état de la checkbox "Rebond Offensif"
             checkbox_status = checkbox.get_status()  # Retourne [True] ou [False]
             rebond_offensif = 1 if checkbox_status[0] else 0  # Convertit le statut de la checkbox en 1 (si coché) ou 0 (si non coché)
+
+            # Filtrer les listes pour enlever les valeurs vides
+            Taille_adversaires_1m = [t for t in tailles_adv_1m if t != ""]
+            Taille_adversaires_2m = [t for t in tailles_adv_2m if t != ""]
+            Moyenne_Reb_adv_1m = [r for r in rebonds_adv_1m if r != ""]
+            Moyenne_Reb_adv_2m = [r for r in rebonds_adv_2m if r != ""]
+
+            # Calculer la valeur du rebond
+            if rebond_offensif:
+                valeur_rebond = valeur_rebond_offensif(
+                    TailleRebondeur=taille_rebondeur,
+                    Moyenne_Rebond_rebondeur=stat_rebond_rebondeur,
+                    Taille_adversaires_1m=Taille_adversaires_1m,
+                    Taille_adversaires_2m=Taille_adversaires_2m,
+                    Moyenne_Reb_adv_1m=Moyenne_Reb_adv_1m,
+                    Moyenne_Reb_adv_2m=Moyenne_Reb_adv_2m,
+                    DiffScore=DiffScore,
+                    TempsRestant=temps_restant,
+                    DistBallePanier=distance_panier_rebondeur,
+                    Ratio=ratio
+                )
+            else:
+                valeur_rebond = valeur_rebond_defensif(
+                    TailleRebondeur=taille_rebondeur,
+                    Moyenne_Rebond_rebondeur=stat_rebond_rebondeur,
+                    Taille_adversaires_1m=Taille_adversaires_1m,
+                    Taille_adversaires_2m=Taille_adversaires_2m,
+                    Moyenne_Reb_adv_1m=Moyenne_Reb_adv_1m,
+                    Moyenne_Reb_adv_2m=Moyenne_Reb_adv_2m,
+                    DiffScore=DiffScore,
+                    TempsRestant=temps_restant,
+                    DistBallePanier=distance_panier_rebondeur,
+                    Ratio=ratio
+                )
 
             # ÉTAPE 6 : Créer un dictionnaire avec toutes les données à exporter
             # Chaque adversaire aura sa propre colonne séparée
@@ -162,9 +406,10 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
                 'Stat_Rebond_Rebondeur': [stat_rebond_rebondeur],
                 'Distance_Panier_Rebondeur': [distance_panier_rebondeur],
                 'Ratio_Adversaires_Coequipiers': [ratio],
-                'Diff_Score': [diff_score],
+                'Diff_Score': [DiffScore],
                 'Temps_Restant': [temps_restant],
-                'Rebond_Offensif': [rebond_offensif]
+                'Rebond_Offensif': [rebond_offensif],
+                'Valeur_Rebond': [valeur_rebond]
             }
 
             # Ajouter les colonnes pour chaque adversaire dans le rayon 1m
