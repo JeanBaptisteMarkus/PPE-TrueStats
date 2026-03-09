@@ -1,3 +1,5 @@
 situations.csv
 donnees_rebonds.xlsx
 *.csv
+__pycache__/
+*.pyc
