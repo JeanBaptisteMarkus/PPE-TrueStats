@@ -1,54 +1,45 @@
 import supervision as sv
+import cv2
 
 class CourtKeypointDrawer:
     """
-    A drawer class responsible for drawing court keypoints on a sequence of frames.
-
-    Attributes:
-        keypoint_color (str): Hex color value for the keypoints.
+    Drawer for court keypoints - VERSION SIMPLIFIÉE POUR VOIR LES POINTS
     """
-    def __init__(self):
-        self.keypoint_color = '#ff2c2c'
-
     def draw(self, frames, court_keypoints):
         """
-        Draws court keypoints on a given list of frames.
-
-        Args:
-            frames (list): A list of frames (as NumPy arrays or image objects) on which to draw.
-            court_keypoints (list): A corresponding list of lists where each sub-list contains
-                the (x, y) coordinates of court keypoints for that frame.
-
-        Returns:
-            list: A list of frames with keypoints drawn on them.
+        Dessine les keypoints du terrain sur les frames.
         """
-        vertex_annotator = sv.VertexAnnotator(
-            color=sv.Color.from_hex(self.keypoint_color),
-            radius=8)
+        output_frames = frames.copy()
         
-        vertex_label_annotator = sv.VertexLabelAnnotator(
-            color=sv.Color.from_hex(self.keypoint_color),
-            text_color=sv.Color.WHITE,
-            text_scale=0.5,
-            text_thickness=1
-        )
+        for i, frame in enumerate(output_frames):
+            if i < len(court_keypoints):
+                keypoints = court_keypoints[i]
+                
+                # Dessiner chaque keypoint
+                for kp in keypoints:
+                    if isinstance(kp, dict):
+                        x = int(kp.get('x', 0))
+                        y = int(kp.get('y', 0))
+                        conf = kp.get('confidence', 0)
+                        name = kp.get('name', 'kp')
+                        
+                        # VERT pour les points détectés
+                        color = (0, 255, 0)
+                        radius = 8
+                        
+                        # Dessiner un cercle bien visible
+                        cv2.circle(frame, (x, y), radius, color, -1)
+                        cv2.circle(frame, (x, y), radius + 2, (255, 255, 255), 2)
+                        
+                        # Ajouter la confiance
+                        cv2.putText(frame, f"{conf:.2f}", 
+                                  (x + 15, y - 10),
+                                  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    else:
+                        # Si c'est un objet avec attributs
+                        if hasattr(kp, 'x') and hasattr(kp, 'y'):
+                            x = int(kp.x)
+                            y = int(kp.y)
+                            cv2.circle(frame, (x, y), 8, (0, 255, 0), -1)
         
-        output_frames = []
-        for index,frame in enumerate(frames):
-            annotated_frame = frame.copy()
-
-            keypoints = court_keypoints[index]
-            # Draw dots
-            annotated_frame = vertex_annotator.annotate(
-                scene=annotated_frame,
-                key_points=keypoints)
-            # Draw labels
-            # Convert PyTorch tensor to numpy array
-            keypoints_numpy = keypoints.cpu().numpy()
-            annotated_frame = vertex_label_annotator.annotate(
-                scene=annotated_frame,
-                key_points=keypoints_numpy)
-
-            output_frames.append(annotated_frame)
-
         return output_frames
