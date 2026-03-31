@@ -22,7 +22,6 @@ from pass_and_interception_detector import PassAndInterceptionDetector
 from court_keypoint_detector import CourtKeypointDetector
 from basket_detector.basket_detector import BasketDetector
 
-# 🟢 Nouveau import pour rebonds
 from ReboundDetector.rebound_detector import ReboundDetector
 
 def stabilize_keypoints(keypoints_list, alpha=0.3):
@@ -66,15 +65,16 @@ def stabilize_keypoints(keypoints_list, alpha=0.3):
 def main():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    input_video_path = os.path.join(BASE_DIR, "input_videos", "video4.mp4")
+    input_video_path = os.path.join(BASE_DIR, "input_videos", "video7.mp4")
     output_dir = os.path.join(BASE_DIR, "output_videos")
     output_video_path = os.path.join(output_dir, "output_video.avi")
 
     player_model_path = os.path.join(BASE_DIR, "models", "player_detector.pt")
     ball_model_path = os.path.join(BASE_DIR, "models", "ball_detector.pt")
-    court_model_path = os.path.join(BASE_DIR, "models", "court_keypoint_detector.pt")
+    court_model_path = os.path.join(BASE_DIR, "models", "court_keypoint.pt")
     basket_model_path = os.path.join(BASE_DIR, "models", "panier.pt")
 
+    # OCR pour récupérer les noms des équipes
     stubs_dir = os.path.join(BASE_DIR, "stubs")
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(stubs_dir, exist_ok=True)
@@ -103,7 +103,7 @@ def main():
         stub_path=stub_path,
         conf_threshold=0.2
     )
-    court_keypoints = stabilize_keypoints(court_keypoints, alpha=0.3)
+    #court_keypoints = stabilize_keypoints(court_keypoints, alpha=0.3)
 
     print("\n🏀 DÉTECTION DES PANIERS")
     basket_detections = basket_detector.detect_baskets(video_frames)
