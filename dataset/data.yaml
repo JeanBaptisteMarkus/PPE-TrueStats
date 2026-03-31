@@ -1,0 +1,22 @@
+names:
+- 55_BaylorScheierman
+- 4_NikolaVucecic
+- 28_HugoGonzalez
+- 3_MylesTurner
+- 21_OusmaneDieng
+- 34_GiannisAntetokounmpo
+- 30_SamHauser
+- 24_CameronThomas
+- 9_DerrickWhite
+- 7_KevinPorter
+- 11_PaytonPrichard
+- 9_BobbyPortis
+- 11_GaryHarris
+- 0_JerichoSims
+- 13_RonHarperJr
+- 44_AndreJacksonJr
+- 52_LukaGarza
+- 35_PeteNance
+nc: 18
+train: C:\Users\anasb\PPE\PPE-TrueStats\dataset\train\images
+val: C:\Users\anasb\PPE\PPE-TrueStats\dataset\val\images
