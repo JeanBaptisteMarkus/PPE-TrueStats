@@ -1,188 +1,99 @@
+import os
+import shutil
+import random
+import yaml
 from ultralytics import YOLO
-import cv2
-import numpy as np
-import math
 
 # ======================
 # CONFIG
 # ======================
-video_path = "video7.mp4"
-detector_path = "basketball_analysis/models/player_detector.pt"
-classifier_path = "runs/detect/train/weights/best.pt"
-output_video = "resultat.mp4"
-
-CONF_LOCK = 0.8
-MAX_DISTANCE = 80
-LOCKED_MAX_DISTANCE = 50
-MAX_MISSING = 10
-STABLE_FRAMES = 3
+dataset_raw = "frames"       # dossier contenant tes .jpg et .txt
+dataset_dir = "dataset"      # dossier de sortie train/val + data.yaml
+epochs = 200                 # nombre d'epochs
+batch_size = 16
+img_size = 640
 
 # ======================
-# INIT
+# LISTE DES JOUEURS
+# ID unique + numéro de maillot + nom pour affichage
 # ======================
-detector = YOLO(detector_path)
-classifier = YOLO(classifier_path)
+player_list = [
+    "0_55_BaylorScheierman",
+    "1_4_NikolaVucecic",
+    "2_28_HugoGonzalez",
+    "3_3_MylesTurner",
+    "4_21_OusmaneDieng",
+    "5_34_GiannisAntetokounmpo",
+    "6_30_SamHauser",
+    "7_24_CameronThomas",
+    "8_9_DerrickWhite",
+    "9_7_KevinPorter",
+    "10_11_PaytonPrichard",
+    "11_9_BobbyPortis",
+    "12_11_GaryHarris",
+    "13_0_JerichoSims",
+    "14_13_RonHarperJr",
+    "15_44_AndreJacksonJr",
+    "16_52_LukaGarza",
+    "17_35_PeteNance"
+]
 
-cap = cv2.VideoCapture(video_path)
-width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-fps = cap.get(cv2.CAP_PROP_FPS)
+# Extraire uniquement la partie affichée sur les bbox
+names = [p.split("_", 1)[1] for p in player_list]
 
-out = cv2.VideoWriter(
-    output_video,
-    cv2.VideoWriter_fourcc(*"mp4v"),
-    fps,
-    (width, height)
+# ======================
+# 1️⃣ Créer les dossiers train/val
+# ======================
+for d in ["train", "val"]:
+    os.makedirs(os.path.join(dataset_dir, d, "images"), exist_ok=True)
+    os.makedirs(os.path.join(dataset_dir, d, "labels"), exist_ok=True)
+
+# ======================
+# 2️⃣ Split train/val et copier les fichiers
+# ======================
+images = [f for f in os.listdir(dataset_raw) if f.endswith(".jpg")]
+random.shuffle(images)
+split = int(0.8 * len(images))
+
+for i, img in enumerate(images):
+    name = os.path.splitext(img)[0]
+    txt = name + ".txt"
+    folder = "train" if i < split else "val"
+
+    shutil.copy(os.path.join(dataset_raw, img), os.path.join(dataset_dir, folder, "images", img))
+    shutil.copy(os.path.join(dataset_raw, txt), os.path.join(dataset_dir, folder, "labels", txt))
+
+# ======================
+# 3️⃣ Générer data.yaml
+# ======================
+data_yaml = {
+    "train": os.path.abspath(os.path.join(dataset_dir, "train/images")),
+    "val": os.path.abspath(os.path.join(dataset_dir, "val/images")),
+    "nc": len(names),
+    "names": names
+}
+
+yaml_path = os.path.join(dataset_dir, "data.yaml")
+with open(yaml_path, "w") as f:
+    yaml.dump(data_yaml, f)
+
+print("[+] data.yaml généré :", yaml_path)
+print("[+] Classes :", names)
+
+# ======================
+# 4️⃣ Lancer l'entraînement YOLOv8
+# ======================
+model = YOLO("yolov8n.pt")  # modèle de base YOLOv8
+
+print("[*] Training...")
+model.train(
+    data=yaml_path,
+    epochs=epochs,
+    imgsz=img_size,
+    batch=batch_size,
+    name="train",
+    augment=True  # data augmentation activée
 )
 
-# ======================
-# MEMORY
-# ======================
-players = {}
-candidates = {}
-used_labels = set()
-next_id = 0
-
-def center(box):
-    x1, y1, x2, y2 = box
-    return int((x1+x2)/2), int((y1+y2)/2)
-
-def dist(a, b):
-    return math.hypot(a[0]-b[0], a[1]-b[1])
-
-frame_id = 0
-
-# ======================
-# LOOP
-# ======================
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
-
-    frame_id += 1
-
-    # ======================
-    # DETECTION JOUEURS
-    # ======================
-    det_results = detector(frame, conf=0.3, verbose=False)
-    boxes = det_results[0].boxes
-
-    detections = []
-    if boxes is not None:
-        for box in boxes.xyxy.cpu().numpy():
-            detections.append(box)
-
-    updated_players = {}
-
-    # ======================
-    # MATCH TRACKING
-    # ======================
-    for box in detections:
-        c = center(box)
-
-        best_id = None
-        min_d = 9999
-
-        for pid, data in players.items():
-            max_d = LOCKED_MAX_DISTANCE if data["locked"] else MAX_DISTANCE
-            d = dist(c, data["center"])
-
-            if d < min_d and d < max_d:
-                min_d = d
-                best_id = pid
-
-        if best_id is not None:
-            player = players[best_id]
-
-            # ======================
-            # CLASSIFICATION
-            # ======================
-            x1, y1, x2, y2 = map(int, box)
-            crop = frame[y1:y2, x1:x2]
-
-            cls_results = classifier(crop, verbose=False)
-
-            if cls_results[0].boxes is not None:
-                for cls, conf in zip(
-                    cls_results[0].boxes.cls.cpu().numpy(),
-                    cls_results[0].boxes.conf.cpu().numpy()
-                ):
-                    label = int(cls)
-
-                    if label not in player["scores"]:
-                        player["scores"][label] = 0
-
-                    player["scores"][label] += conf
-
-            # ======================
-            # CHOISIR MEILLEUR LABEL
-            # ======================
-            if player["scores"]:
-                best_label = max(player["scores"], key=player["scores"].get)
-
-                # 🔒 éviter doublon
-                if best_label not in used_labels:
-                    player["label"] = best_label
-
-                    # 🔥 LOCK
-                    if player["scores"][best_label] >= CONF_LOCK:
-                        player["locked"] = True
-                        used_labels.add(best_label)
-
-            updated_players[best_id] = {
-                **player,
-                "center": c,
-                "last_seen": frame_id
-            }
-
-        else:
-            # ======================
-            # NOUVEAU JOUEUR (CANDIDAT)
-            # ======================
-            candidates[next_id] = {
-                "center": c,
-                "frames": 1,
-                "scores": {},
-                "label": None,
-                "locked": False
-            }
-            next_id += 1
-
-    # ======================
-    # CLEAN MEMORY
-    # ======================
-    for pid, data in players.items():
-        if frame_id - data["last_seen"] < MAX_MISSING:
-            if pid not in updated_players:
-                updated_players[pid] = data
-
-    players = updated_players
-
-    # ======================
-    # DRAW (TON STYLE)
-    # ======================
-    annotated = frame.copy()
-
-    for pid, p in players.items():
-        x, y = p["center"]
-
-        text = f"ID {pid}"
-        if p["label"] is not None:
-            text += f" | P{p['label']}"
-
-        if p["locked"]:
-            text += " 🔒"
-
-        cv2.putText(annotated, text, (x, y-10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,0), 2)
-
-        cv2.circle(annotated, (x, y), 4, (0,255,0), -1)
-
-    out.write(annotated)
-
-cap.release()
-out.release()
-cv2.destroyAllWindows()
-
-print("[+] Tracking + identification terminé")
+print("[+] Training terminé")
+print("Ton modèle est ici : runs/detect/train/weights/best.pt")
