@@ -65,7 +65,7 @@ def stabilize_keypoints(keypoints_list, alpha=0.3):
 def main():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    input_video_path = os.path.join(BASE_DIR, "input_videos", "video7.mp4")
+    input_video_path = os.path.join(BASE_DIR, "input_videos", "video8.mp4")
     output_dir = os.path.join(BASE_DIR, "output_videos")
     output_video_path = os.path.join(output_dir, "output_video.avi")
 
@@ -73,6 +73,7 @@ def main():
     ball_model_path = os.path.join(BASE_DIR, "models", "ball_detector.pt")
     court_model_path = os.path.join(BASE_DIR, "models", "court_keypoint.pt")
     basket_model_path = os.path.join(BASE_DIR, "models", "panier.pt")
+    team_model_path = os.path.join(BASE_DIR, "models", "team.pt")
 
     # OCR pour récupérer les noms des équipes
     stubs_dir = os.path.join(BASE_DIR, "stubs")
@@ -123,7 +124,7 @@ def main():
     ball_tracks = ball_tracker.interpolate_ball_positions(ball_tracks)
 
     print("\n📊 ÉTAPE 3/3 - ANALYSE DU JEU")
-    team_assigner = TeamAssigner()
+    team_assigner = TeamAssigner(team_model_path)
     player_assignment = team_assigner.get_player_teams_across_frames(
         video_frames,
         player_tracks,

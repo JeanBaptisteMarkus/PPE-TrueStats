@@ -1,0 +1,9 @@
+
+path: C:\Users\anasb\PPE\PPE-TrueStats\dataset
+
+train: images/train
+val: images/val
+
+names:
+  0: Celtics
+  1: Milwaukee
