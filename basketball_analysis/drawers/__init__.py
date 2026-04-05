@@ -2,4 +2,7 @@ from .player_tracks_drawer import PlayerTracksDrawer
 from .ball_tracks_drawer import BallTracksDrawer
 from .team_ball_control_drawer import TeamBallControlDrawer
 from .pass_and_interception_drawer import PassAndInterceptionDrawer
+
 from .court_keypoint_drawer import CourtKeypointDrawer
+from .basket_drawer import BasketDrawer
+
