@@ -11,7 +11,7 @@ from drawers import (
     PlayerTracksDrawer,
     BallTracksDrawer,
     TeamBallControlDrawer,
-    PassAndInterceptionDrawer,
+    ReboundDrawer,
     CourtKeypointDrawer,
     BasketDrawer
 )
@@ -21,7 +21,6 @@ from ball_acquisition import BallAcquisitionDetector
 from pass_and_interception_detector import PassAndInterceptionDetector
 from court_keypoint_detector import CourtKeypointDetector
 from basket_detector.basket_detector import BasketDetector
-
 from ReboundDetector.rebound_detector import ReboundDetector
 
 def stabilize_keypoints(keypoints_list, alpha=0.3):
@@ -229,7 +228,7 @@ def main():
     player_tracks_drawer = PlayerTracksDrawer()
     ball_tracks_drawer = BallTracksDrawer()
     team_ball_control_drawer = TeamBallControlDrawer()
-    pass_and_interception_drawer = PassAndInterceptionDrawer()
+    rebound_drawer = ReboundDrawer()
     court_keypoint_drawer = CourtKeypointDrawer()
     basket_drawer = BasketDrawer()
 
@@ -237,8 +236,8 @@ def main():
     output_video_frames = court_keypoint_drawer.draw(output_video_frames, court_keypoints)
     output_video_frames = player_tracks_drawer.draw(output_video_frames, player_tracks, player_assignment, ball_acquisition, player_identity_map)
     output_video_frames = ball_tracks_drawer.draw(output_video_frames, ball_tracks)
-    output_video_frames = team_ball_control_drawer.draw(output_video_frames, player_assignment, ball_acquisition)
-    output_video_frames = pass_and_interception_drawer.draw(output_video_frames, passes, interceptions)
+    #output_video_frames = team_ball_control_drawer.draw(output_video_frames, player_assignment, ball_acquisition)
+    output_video_frames = rebound_drawer.draw(output_video_frames, rebounds)
     output_video_frames = basket_drawer.draw(output_video_frames, basket_detections)
 
     save_video(output_video_frames, output_video_path)
