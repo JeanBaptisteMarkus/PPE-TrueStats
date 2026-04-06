@@ -65,7 +65,7 @@ def stabilize_keypoints(keypoints_list, alpha=0.3):
 def main():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    input_video_path = os.path.join(BASE_DIR, "input_videos", "video8.mp4")
+    input_video_path = os.path.join(BASE_DIR, "input_videos", "video9.mp4")
     output_dir = os.path.join(BASE_DIR, "output_videos")
     output_video_path = os.path.join(output_dir, "output_video.avi")
 
@@ -74,8 +74,8 @@ def main():
     court_model_path = os.path.join(BASE_DIR, "models", "court_keypoint.pt")
     basket_model_path = os.path.join(BASE_DIR, "models", "panier.pt")
     team_model_path = os.path.join(BASE_DIR, "models", "team.pt")
+    joueur_equipe_path = os.path.join(BASE_DIR, "models", "JoueurEquipe.pt")
 
-    # OCR pour récupérer les noms des équipes
     stubs_dir = os.path.join(BASE_DIR, "stubs")
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(stubs_dir, exist_ok=True)
@@ -104,7 +104,6 @@ def main():
         stub_path=stub_path,
         conf_threshold=0.2
     )
-    #court_keypoints = stabilize_keypoints(court_keypoints, alpha=0.3)
 
     print("\n🏀 DÉTECTION DES PANIERS")
     basket_detections = basket_detector.detect_baskets(video_frames)
@@ -124,13 +123,16 @@ def main():
     ball_tracks = ball_tracker.interpolate_ball_positions(ball_tracks)
 
     print("\n📊 ÉTAPE 3/3 - ANALYSE DU JEU")
-    team_assigner = TeamAssigner(team_model_path)
+    team_assigner = TeamAssigner(team_model_path, joueur_equipe_path, 'InfosJoueurs.txt')
     player_assignment = team_assigner.get_player_teams_across_frames(
         video_frames,
         player_tracks,
         read_from_stub=True,
         stub_path=os.path.join(stubs_dir, "player_assignment_stubs.pkl")
     )
+    
+    player_identity_map = team_assigner.get_player_identity_map()
+    
     ball_acquisition_detector = BallAcquisitionDetector()
     ball_acquisition = ball_acquisition_detector.detect_ball_possession(
         player_tracks,
@@ -147,11 +149,10 @@ def main():
     )
 
     # -------------------------
-    # 🟢 NOUVEAU : DÉTECTION DES REBONDS
+    # 🟢 DÉTECTION DES REBONDS (version du premier code)
     # -------------------------
     rebound_detector = ReboundDetector(basket_threshold=50)
 
-    # extraire le centre de la balle par frame
     ball_positions = []
     for frame_ball in ball_tracks:
         bbox = frame_ball.get(1, {}).get("bbox", None)
@@ -165,39 +166,45 @@ def main():
 
     possession_list = ball_acquisition
 
-    # choisir le panier (centre du premier panier détecté)
     if basket_detections and basket_detections[0]:
         basket_center = basket_detections[0][0]["center"]
     else:
         basket_center = (0, 0)
 
-    # listes pour stocker tirs, ratés, rebonds
-    missed_shots = [False] * len(ball_positions)
-    rebounds = [False] * len(ball_positions)
     shot_attempts = [False] * len(ball_positions)
     made_shots = [False] * len(ball_positions)
+    rebounds = [False] * len(ball_positions)
 
-    last_missed_shot_idx = None
     for t in range(len(ball_positions)):
         if ball_positions[t][0] is None:
             continue
 
-        # détecter les tirs et leur résultat
         shot_attempts[t] = rebound_detector.detect_shot_attempt(ball_positions, possession_list, t)
         made_shots[t] = rebound_detector.detect_made_shot(ball_positions, basket_center, t)
-        missed_shots[t] = rebound_detector.detect_missed_shot(ball_positions, basket_center, t)
 
-        # détecter un rebond uniquement après un tir raté précédent
-        if last_missed_shot_idx is not None:
-            if possession_list[t] != -1:  # un joueur récupère la balle
-                rebounds[t] = True
-                last_missed_shot_idx = None  # on a pris en compte le rebond
+    for t in range(len(ball_positions)):
+        if ball_positions[t][0] is None:
+            continue
+        
+        if t > 0 and possession_list[t] != -1 and possession_list[t-1] == -1:
+            
+            shot_occurred = False
+            for lookback in range(max(0, t - 40), t):
+                if shot_attempts[lookback] or made_shots[lookback]:
+                    shot_occurred = True
+                    break
+            
+            if shot_occurred:
+                bx, by = ball_positions[t]
+                if bx is not None and by is not None and basket_center != (0, 0):
+                    dist_to_basket = np.sqrt((bx - basket_center[0])**2 + (by - basket_center[1])**2)
+                    
+                    if dist_to_basket < 150:
+                        current_holder = possession_list[t]
+                        team_id = player_assignment[t].get(current_holder, -1)
+                        if team_id != -1:
+                            rebounds[t] = team_id
 
-        # mettre à jour le dernier tir raté
-        if missed_shots[t]:
-            last_missed_shot_idx = t
-
-    # sauvegarde frames de tir
     shot_dir = os.path.join(output_dir, "shot_frames")
     os.makedirs(shot_dir, exist_ok=True)
     shot_frames = [i for i, shot in enumerate(shot_attempts) if shot]
@@ -207,12 +214,13 @@ def main():
         cv2.imwrite(filename, frame)
     print(f"Frames de tir enregistrées dans : {shot_dir}")
 
-    # sauvegarde frames de rebond (une seule frame par rebond)
     rebound_frames = []
+    rebound_teams = []
     for i, reb in enumerate(rebounds):
         if reb:
             if not rebound_frames or i - rebound_frames[-1] > 2:
                 rebound_frames.append(i)
+                rebound_teams.append(reb)
 
     rebound_dir = os.path.join(output_dir, "rebound_frames")
     os.makedirs(rebound_dir, exist_ok=True)
@@ -221,6 +229,11 @@ def main():
         filename = os.path.join(rebound_dir, f"rebound_frame_{idx:04d}.jpg")
         cv2.imwrite(filename, frame)
     print(f"Frames de rebond enregistrées dans : {rebound_dir}")
+
+    if rebound_teams:
+        bucks_rebounds = sum(1 for t in rebound_teams if t == 1)
+        celtics_rebounds = sum(1 for t in rebound_teams if t == 2)
+        print(f"📊 Rebonds détectés: Bucks: {bucks_rebounds}, Celtics: {celtics_rebounds}")
 
     # -------------------------
     # 🎨 DESSIN DE L'OUTPUT VIDÉO
@@ -234,11 +247,11 @@ def main():
 
     output_video_frames = video_frames.copy()
     output_video_frames = court_keypoint_drawer.draw(output_video_frames, court_keypoints)
-    output_video_frames = player_tracks_drawer.draw(output_video_frames, player_tracks, player_assignment, ball_acquisition)
+    output_video_frames = player_tracks_drawer.draw(output_video_frames, player_tracks, player_assignment, ball_acquisition, player_identity_map)
     output_video_frames = ball_tracks_drawer.draw(output_video_frames, ball_tracks)
     output_video_frames = team_ball_control_drawer.draw(output_video_frames, player_assignment, ball_acquisition)
     output_video_frames = pass_and_interception_drawer.draw(output_video_frames, passes, interceptions)
-    output_video_frames = basket_drawer.draw(output_video_frames,basket_detections)
+    output_video_frames = basket_drawer.draw(output_video_frames, basket_detections)
 
     save_video(output_video_frames, output_video_path)
 

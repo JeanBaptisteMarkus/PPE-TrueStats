@@ -1,0 +1,19 @@
+Nom Prenom, Age, Equipe
+Baylor Scheierman, 1.98m, Celtics
+Nikola Vucevic, 2.08m, Celtics
+Hugo Gonzalez, 1.98m, Celtics
+Myles Turner, 2.11m, Milwaukee
+Ousmane Dieng, 2.08m, Milwaukee
+Giannis Antetokounmpo, 2.11m, Milwaukee
+Sam Hauser, 2.01m, Celtics
+Cameron Thomas, 1.91m, Milwaukee
+Derrick White, 1.93m, Celtics
+Kevin Porter Jr, 1.93m, Milwaukee
+Payton Pritchard, 1.85m, Celtics
+Bobby Portis, 2.08m, Milwaukee
+Gary Harris, 1.93m, Milwaukee
+Jericho Sims, 2.08m, Milwaukee
+Ron Harper Jr, 1.98m, Celtics
+Andre Jackson Jr, 1.98m, Milwaukee
+Luka Garza, 2.08m, Celtics
+Pete Nance, 2.08m, Milwaukee
