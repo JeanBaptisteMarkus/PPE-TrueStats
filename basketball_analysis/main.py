@@ -25,10 +25,6 @@ from basket_detector.basket_detector import BasketDetector
 from ReboundDetector.rebound_detector import ReboundDetector
 
 def stabilize_keypoints(keypoints_list, alpha=0.3):
-    """
-    Stabilise les keypoints d'une vidéo en faisant une moyenne exponentielle sur les frames.
-    alpha: coefficient de lissage (0 = très lisse, 1 = pas de lissage)
-    """
     stabilized = []
     last_kp = None
 
@@ -149,7 +145,7 @@ def main():
     )
 
     # -------------------------
-    # 🟢 DÉTECTION DES REBONDS (version du premier code)
+    # 🟢 DÉTECTION DES REBONDS (avec detect_rebound)
     # -------------------------
     rebound_detector = ReboundDetector(basket_threshold=50)
 
@@ -173,37 +169,29 @@ def main():
 
     shot_attempts = [False] * len(ball_positions)
     made_shots = [False] * len(ball_positions)
+    missed_shots = [False] * len(ball_positions)
     rebounds = [False] * len(ball_positions)
 
+    # Détection des tirs
     for t in range(len(ball_positions)):
         if ball_positions[t][0] is None:
             continue
 
         shot_attempts[t] = rebound_detector.detect_shot_attempt(ball_positions, possession_list, t)
         made_shots[t] = rebound_detector.detect_made_shot(ball_positions, basket_center, t)
+        missed_shots[t] = rebound_detector.detect_missed_shot(ball_positions, basket_center, t)
 
+    # Détection des rebonds avec detect_rebound
     for t in range(len(ball_positions)):
         if ball_positions[t][0] is None:
             continue
         
-        if t > 0 and possession_list[t] != -1 and possession_list[t-1] == -1:
-            
-            shot_occurred = False
-            for lookback in range(max(0, t - 40), t):
-                if shot_attempts[lookback] or made_shots[lookback]:
-                    shot_occurred = True
-                    break
-            
-            if shot_occurred:
-                bx, by = ball_positions[t]
-                if bx is not None and by is not None and basket_center != (0, 0):
-                    dist_to_basket = np.sqrt((bx - basket_center[0])**2 + (by - basket_center[1])**2)
-                    
-                    if dist_to_basket < 150:
-                        current_holder = possession_list[t]
-                        team_id = player_assignment[t].get(current_holder, -1)
-                        if team_id != -1:
-                            rebounds[t] = team_id
+        if rebound_detector.detect_rebound(missed_shots, ball_positions, possession_list, t):
+            current_holder = possession_list[t]
+            team_id = player_assignment[t].get(current_holder, -1)
+            if team_id != -1:
+                rebounds[t] = team_id
+                print(f"  🏀 Rebond frame {t}: équipe {team_id}")
 
     shot_dir = os.path.join(output_dir, "shot_frames")
     os.makedirs(shot_dir, exist_ok=True)
