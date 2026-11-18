@@ -396,6 +396,9 @@ def extraire_donnee(gestionnaire, fig, score_equipe1, score_equipe2, temps_resta
                     Ratio=ratio
                 )
 
+            # Afficher la valeur du rebond dans le terminal
+            print(f"Valeur du rebond : {valeur_rebond}")
+
             # ÉTAPE 6 : Créer un dictionnaire avec toutes les données à exporter
             # Chaque adversaire aura sa propre colonne séparée
             donnees = {
