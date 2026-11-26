@@ -1,7 +1,8 @@
+"""Interaction avec le terrain : sélection, déplacement et remplacement des joueurs."""
 import numpy as np
 import matplotlib.pyplot as plt
-from def_equipe_joueur import LONGUEUR_TERRAIN, LARGEUR_TERRAIN
-from terrain import dessiner_terrain
+from ..config import LONGUEUR_TERRAIN, LARGEUR_TERRAIN, RAYON_SELECTION_JOUEUR
+from .terrain import dessiner_terrain
 
 
 class GestionnaireJoueurs:
@@ -34,9 +35,10 @@ class GestionnaireJoueurs:
         self.joueur_selectionne = None
         self.dragging = False
         
-    def obtenir_nom_complet(self, joueur):
+    @staticmethod
+    def obtenir_nom_complet(joueur):
         """Retourne le nom complet d'un joueur sous forme 'Prénom Nom'."""
-        return f"{joueur.prenom} {joueur.nom}"
+        return joueur.nom_complet
     
     def remplacer_joueur(self, joueur_a_remplacer, nouveau_joueur):
         """Remplace un joueur sur le terrain par un remplaçant."""
@@ -125,7 +127,7 @@ class GestionnaireJoueurs:
             for joueur in self.joueurs_equipe1 + self.joueurs_equipe2:
                 x, y = joueur.position
                 dist = np.hypot(x - x_click, y - y_click)
-                if dist < 0.7:
+                if dist < RAYON_SELECTION_JOUEUR:
                     self.joueur_selectionne = joueur
                     self.dragging = True
                     self.draw_players()

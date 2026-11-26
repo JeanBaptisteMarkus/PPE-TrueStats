@@ -1,3 +1,13 @@
+"""Random Forest entraînée sur des situations de rebond synthétiques.
+
+Les situations sont générées aléatoirement et étiquetées avec la formule
+sigmoïde de `version_initiale_terrain.py` : le modèle apprend donc à
+reproduire cette formule (malgré l'ancien nom « RegressionLineaire », il
+s'agit d'un `RandomForestRegressor`).
+
+Lancement : python experimentations/random_forest_rebond.py
+(écrit `dataset_rebond_equilibre.csv` dans le répertoire courant)
+"""
 import numpy as np
 import pandas as pd
 import random

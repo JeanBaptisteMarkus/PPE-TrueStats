@@ -1,3 +1,12 @@
+"""Première version (monolithique) du terrain virtuel — conservée pour référence.
+
+Différences avec le package `terrain_virtuel` :
+- équipes fixes (Dallas / Los Angeles Lakers), minuteur de 90 s ;
+- valeur du rebond calculée par une sigmoïde (pression adverse + importance du contexte) ;
+- export dans `situations.csv` (séparateur « ; »).
+
+Lancement : python experimentations/version_initiale_terrain.py
+"""
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,7 +15,10 @@ import csv
 from matplotlib.lines import Line2D
 from matplotlib.patches import Arc
 import os
+from pathlib import Path
 import matplotlib.animation as animation
+
+FICHIER_JOUEURS = Path(__file__).resolve().parent.parent / "data" / "joueurs_nba.csv"
 
 LONGUEUR_TERRAIN = 14.325
 LARGEUR_TERRAIN = 15.24
@@ -51,7 +63,7 @@ class SituationBasket:
         if prefix is None:
             raise ValueError(f"Préfixe inconnu pour l'équipe {equipe_nom}")
 
-        with open('InfosJoueurs', newline='', encoding='utf-8') as f:
+        with open(FICHIER_JOUEURS, newline='', encoding='utf-8') as f:
             attributs = csv.DictReader(f, delimiter=',')
             for ligne in attributs:
                 if ligne["ID"].startswith(prefix):
@@ -181,7 +193,7 @@ class SituationBasket:
 
         # --- sauvegarde ---
         df = pd.DataFrame([data])
-        filename = "situations.csv"
+        filename = "situations.csv"  # écrit dans le répertoire courant
         file_exists = os.path.exists(filename)
         file_empty = (not file_exists) or (os.path.getsize(filename) == 0)
         df.to_csv(filename, mode="a", index=False, header=file_empty, sep=";")

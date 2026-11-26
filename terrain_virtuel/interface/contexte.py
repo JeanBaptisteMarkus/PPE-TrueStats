@@ -1,11 +1,19 @@
+"""Fenêtre tkinter de choix du contexte du match (équipes, score, temps restant)."""
+import random
+import sys
 import tkinter as tk
 from tkinter import ttk
-import random
-from def_equipe_joueur import equipes_NBA
+
+from ..joueurs import EQUIPES_NBA
 
 
 def choix_contexte_tkinter():
-    """Fonction pour le menu de choix du contexte du match (interface graphique)"""
+    """Affiche le menu de choix du contexte du match.
+
+    Les champs laissés vides reçoivent une valeur aléatoire. Retourne
+    (equipe1, equipe2, score_equipe1, score_equipe2, temps_restant), où les équipes
+    sont des abréviations (ex. "BOS"). Fermer la fenêtre quitte le programme.
+    """
 
     equipe1 = None
     equipe2 = None
@@ -21,7 +29,7 @@ def choix_contexte_tkinter():
 
     # ***choix de la première équipe***
     ttk.Label(fenetre, text="Équipe 1 :").grid(row=0, column=0, padx=10, pady=10, sticky="w")
-    menu_deroulant1 = ttk.Combobox(fenetre, values=list(equipes_NBA.keys()), state="readonly")
+    menu_deroulant1 = ttk.Combobox(fenetre, values=list(EQUIPES_NBA.keys()), state="readonly")
     menu_deroulant1.grid(row=0, column=1, padx=10)
     # ***entrée pour le score de la première équipe***
     ttk.Label(fenetre, text="Score équipe 1 :").grid(row=0, column=2, padx=10, sticky="w")
@@ -30,7 +38,7 @@ def choix_contexte_tkinter():
 
     # ***choix de la deuxième équipe***
     ttk.Label(fenetre, text="Équipe 2 :").grid(row=1, column=0, padx=10, pady=10, sticky="w")
-    menu_deroulant2 = ttk.Combobox(fenetre, values=list(equipes_NBA.keys()), state="readonly")
+    menu_deroulant2 = ttk.Combobox(fenetre, values=list(EQUIPES_NBA.keys()), state="readonly")
     menu_deroulant2.grid(row=1, column=1, padx=10)
     # ***entrée pour le score de la deuxième équipe***
     ttk.Label(fenetre, text="Score équipe 2 :").grid(row=1, column=2, padx=10)
@@ -40,7 +48,7 @@ def choix_contexte_tkinter():
     # Empêcher la sélection de la même équipe dans les deux menus
     def on_select_team1(event=None):
         sel = menu_deroulant1.get()
-        vals = [t for t in list(equipes_NBA.keys()) if t != sel]
+        vals = [t for t in list(EQUIPES_NBA.keys()) if t != sel]
         menu_deroulant2['values'] = vals
         if menu_deroulant2.get() == sel:
             menu_deroulant2.set('')
@@ -48,7 +56,7 @@ def choix_contexte_tkinter():
     # Empecher la sélection de la même équipe dans les deux menus
     def on_select_team2(event=None):
         sel = menu_deroulant2.get()
-        vals = [t for t in list(equipes_NBA.keys()) if t != sel]
+        vals = [t for t in list(EQUIPES_NBA.keys()) if t != sel]
         menu_deroulant1['values'] = vals
         if menu_deroulant1.get() == sel:
             menu_deroulant1.set('')
@@ -68,13 +76,13 @@ def choix_contexte_tkinter():
         # Récupérer les valeurs ou utiliser des valeurs aléatoires
         equipe1_choix = menu_deroulant1.get()
         if not equipe1_choix:
-            equipe1_choix = random.choice(list(equipes_NBA.keys()))
-        equipe1 = equipes_NBA[equipe1_choix]
+            equipe1_choix = random.choice(list(EQUIPES_NBA.keys()))
+        equipe1 = EQUIPES_NBA[equipe1_choix]
 
         equipe2_choix = menu_deroulant2.get()
         if not equipe2_choix:
-            equipe2_choix = random.choice(list(equipes_NBA.keys()))
-        equipe2 = equipes_NBA[equipe2_choix]
+            equipe2_choix = random.choice(list(EQUIPES_NBA.keys()))
+        equipe2 = EQUIPES_NBA[equipe2_choix]
 
         try:
             score_equipe1 = int(choix_score_equipe1.get()) if choix_score_equipe1.get() else random.randint(60, 120)
@@ -96,7 +104,6 @@ def choix_contexte_tkinter():
     #Gérer la fermeture de la fenêtre
     def fermeture_fenetre():
         fenetre.destroy()
-        import sys 
         sys.exit(0)
     fenetre.protocol("WM_DELETE_WINDOW", fermeture_fenetre) # Gérer la fermeture de la fenêtre    
 
