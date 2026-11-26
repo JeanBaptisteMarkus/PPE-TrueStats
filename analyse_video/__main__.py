@@ -26,6 +26,7 @@ from .affichage import (
     TeamBallControlDrawer,
 )
 from .detection import BallTracker, BasketDetector, CourtKeypointDetector, PlayerTracker, TeamAssigner
+from .equipes import EquipesParCouleur
 from .evenements import (
     BallAcquisitionDetector,
     PassAndInterceptionDetector,
@@ -142,7 +143,7 @@ def enregistrer_frames(video_frames, indices, dossier, prefixe):
         cv2.imwrite(os.path.join(dossier, f"{prefixe}_{idx:04d}.jpg"), video_frames[idx])
 
 
-def main(input_video_path=config.VIDEO_PAR_DEFAUT, utiliser_cache=True):
+def main(input_video_path=config.VIDEO_PAR_DEFAUT, utiliser_cache=True, attribution="couleur", noms_equipes=None):
     dossier_stubs, dossier_sortie = dossiers_pour_video(input_video_path)
     output_dir, stubs_dir = str(dossier_sortie), str(dossier_stubs)
     output_video_path = os.path.join(output_dir, "output_video.avi")
@@ -193,15 +194,31 @@ def main(input_video_path=config.VIDEO_PAR_DEFAUT, utiliser_cache=True):
     ball_tracks = ball_tracker.interpolate_ball_positions(ball_tracks)
 
     print("\n📊 ÉTAPE 3/3 - ANALYSE DU JEU")
-    team_assigner = TeamAssigner(str(config.MODELE_EQUIPES), str(config.MODELE_IDENTITE_JOUEURS),
-                                 str(config.FICHIER_JOUEURS))
+    if attribution == "modele":
+        # Modèles entraînés sur le match Celtics - Bucks uniquement (donne aussi le nom des joueurs)
+        team_assigner = TeamAssigner(str(config.MODELE_EQUIPES), str(config.MODELE_IDENTITE_JOUEURS),
+                                     str(config.FICHIER_JOUEURS))
+        stub_equipes = "player_assignment_stubs.pkl"
+        noms_equipes = noms_equipes or ("Bucks", "Celtics")
+    else:
+        # Couleur des maillots : fonctionne pour n'importe quel match
+        team_assigner = EquipesParCouleur()
+        stub_equipes = "team_color_stubs.pkl"
+        noms_equipes = noms_equipes or ("Équipe claire", "Équipe foncée")
     player_assignment = team_assigner.get_player_teams_across_frames(
         video_frames,
         player_tracks,
         read_from_stub=utiliser_cache,
-        stub_path=os.path.join(stubs_dir, "player_assignment_stubs.pkl")
+        stub_path=os.path.join(stubs_dir, stub_equipes)
     )
     player_identity_map = team_assigner.get_player_identity_map()
+    couleurs_equipes = getattr(team_assigner, "couleurs_equipes", {})
+    for numero, nom in enumerate(noms_equipes, start=1):
+        couleur = couleurs_equipes.get(numero)
+        print(f"  Équipe {numero} = {nom}" + (f" (couleur BGR du maillot {couleur})" if couleur else ""))
+    if attribution == "couleur" and not team_assigner.attribution_fiable():
+        print(f"⚠️ Maillots de couleurs proches (écart {team_assigner.ecart_couleurs:.0f}) : "
+              "attribution des équipes peu fiable.")
 
     ball_acquisition = BallAcquisitionDetector().detect_ball_possession(player_tracks, ball_tracks)
     pass_and_interception_detector = PassAndInterceptionDetector()
@@ -236,18 +253,21 @@ def main(input_video_path=config.VIDEO_PAR_DEFAUT, utiliser_cache=True):
     print(f"Frames de rebond enregistrées dans : {rebound_dir}")
 
     if rebound_teams:
-        bucks_rebounds = sum(1 for t in rebound_teams if t == 1)
-        celtics_rebounds = sum(1 for t in rebound_teams if t == 2)
-        print(f"📊 Rebonds détectés: Bucks: {bucks_rebounds}, Celtics: {celtics_rebounds}")
+        rebonds_1 = sum(1 for t in rebound_teams if t == 1)
+        rebonds_2 = sum(1 for t in rebound_teams if t == 2)
+        print(f"📊 Rebonds détectés: {noms_equipes[0]}: {rebonds_1}, {noms_equipes[1]}: {rebonds_2}")
 
     # --- Vidéo annotée -------------------------------------------------------
     output_video_frames = video_frames.copy()
     output_video_frames = CourtKeypointDrawer().draw(output_video_frames, court_keypoints)
-    output_video_frames = PlayerTracksDrawer().draw(output_video_frames, player_tracks, player_assignment,
+    output_video_frames = PlayerTracksDrawer(
+        team_1_color=couleurs_equipes.get(1, (255, 255, 255)),
+        team_2_color=couleurs_equipes.get(2, (0, 230, 0)),
+    ).draw(output_video_frames, player_tracks, player_assignment,
                                                     ball_acquisition, player_identity_map)
     output_video_frames = BallTracksDrawer().draw(output_video_frames, ball_tracks)
     # output_video_frames = TeamBallControlDrawer().draw(output_video_frames, player_assignment, ball_acquisition)
-    output_video_frames = ReboundDrawer().draw(output_video_frames, rebounds)
+    output_video_frames = ReboundDrawer(noms_equipes).draw(output_video_frames, rebounds)
     output_video_frames = BasketDrawer().draw(output_video_frames, basket_detections)
 
     save_video(output_video_frames, output_video_path, fps=fps)
@@ -264,6 +284,12 @@ def parse_args():
     parser = argparse.ArgumentParser(prog="python -m analyse_video", description=__doc__.splitlines()[0])
     parser.add_argument("video", nargs="?", default=config.VIDEO_PAR_DEFAUT,
                         help=f"vidéo à analyser (défaut : {config.VIDEO_PAR_DEFAUT.relative_to(config.RACINE_PROJET)})")
+    parser.add_argument("--attribution", choices=["couleur", "modele"], default="couleur",
+                        help="équipes par couleur des maillots (tout match, défaut) ou par les modèles "
+                             "team.pt / JoueurEquipe.pt (match Celtics - Bucks uniquement)")
+    parser.add_argument("--equipes", nargs=2, metavar=("EQUIPE_1", "EQUIPE_2"),
+                        help="noms des équipes : avec --attribution couleur, l'équipe 1 est celle "
+                             "au maillot le plus clair")
     parser.add_argument("--sans-cache", action="store_true",
                         help="recalcule les détections au lieu de relire les stubs pickle")
     return parser.parse_args()
@@ -271,4 +297,4 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.video, utiliser_cache=not args.sans_cache)
+    main(args.video, utiliser_cache=not args.sans_cache, attribution=args.attribution, noms_equipes=args.equipes)

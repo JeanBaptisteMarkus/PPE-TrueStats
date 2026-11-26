@@ -3,8 +3,8 @@ import cv2
 
 class PlayerTracksDrawer:
 
-    def __init__(self, team_1_color=(255,255,255), team_2_color=(0,230,0)):
-        self.default_player_team_id = 1
+    def __init__(self, team_1_color=(255,255,255), team_2_color=(0,230,0), unassigned_color=(160,160,160)):
+        self.unassigned_color = unassigned_color  # joueur sans équipe attribuée
         self.team_1_color = team_1_color
         self.team_2_color = team_2_color
         self.player_names = {}
@@ -23,12 +23,14 @@ class PlayerTracksDrawer:
             player_id_has_ball = ball_acquisition[frame_num]
 
             for track_id, player in player_dict.items():
-                team_id = player_assignment_for_frame.get(track_id, self.default_player_team_id)
+                team_id = player_assignment_for_frame.get(track_id)
 
                 if team_id == 1:
                     color = self.team_1_color
-                else:
+                elif team_id == 2:
                     color = self.team_2_color
+                else:
+                    color = self.unassigned_color
 
                 if track_id == player_id_has_ball:
                     frame = draw_triangle(frame, player["bbox"], (0,0,255))

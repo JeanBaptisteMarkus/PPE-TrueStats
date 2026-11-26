@@ -1,13 +1,20 @@
+import unicodedata
+
 import cv2
 import numpy as np
+
+
+def texte_ascii(texte):
+    """Les polices d'OpenCV n'affichent que l'ASCII : « Équipe » -> « Equipe »."""
+    return unicodedata.normalize("NFKD", texte).encode("ascii", "ignore").decode()
 
 class ReboundDrawer:
     """
     A class responsible for calculating and drawing rebound statistics
     on a sequence of video frames.
     """
-    def __init__(self):
-        pass
+    def __init__(self, noms_equipes=("Team 1", "Team 2")):
+        self.noms_equipes = [texte_ascii(nom) for nom in noms_equipes]
 
     def get_stats(self, rebounds):
         team1_rebounds, team2_rebounds = 0, 0
@@ -69,7 +76,7 @@ class ReboundDrawer:
         # Dessin de la ligne Team 1
         cv2.putText(
             frame, 
-            f"Team 1 - Rebounds: {t1_rebs}",
+            f"{self.noms_equipes[0]} - Rebounds: {t1_rebs}",
             (text_x, text_y1), 
             cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), font_thickness
         )
@@ -77,7 +84,7 @@ class ReboundDrawer:
         # Dessin de la ligne Team 2
         cv2.putText(
             frame, 
-            f"Team 2 - Rebounds: {t2_rebs}",
+            f"{self.noms_equipes[1]} - Rebounds: {t2_rebs}",
             (text_x, text_y2), 
             cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), font_thickness
         )
