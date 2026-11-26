@@ -37,3 +37,22 @@ def test_ball_drawer_ne_modifie_pas_les_frames_d_entree():
     entree = frames(1)
     sortie = BallTracksDrawer().draw(entree, [{1: {"bbox": [60, 60, 80, 80]}}])
     assert entree[0].sum() == 0 and sortie[0].sum() > 0
+
+
+def test_video_de_sortie_garde_les_fps_de_la_source(tmp_path):
+    cv2 = pytest.importorskip("cv2")
+    from analyse_video.utils.video_utils import lire_fps, save_video
+    chemin = str(tmp_path / "sortie" / "video.avi")
+    save_video(frames(10), chemin, fps=60.0)
+    assert lire_fps(chemin) == pytest.approx(60.0)
+    assert lire_fps(str(tmp_path / "inexistante.mp4")) == 24.0
+
+
+def test_aucun_ballon_detecte_ne_plante_pas():
+    pytest.importorskip("ultralytics")
+    pytest.importorskip("supervision")
+    from analyse_video.detection.ball_tracker import BallTracker
+    tracker = BallTracker.__new__(BallTracker)  # sans charger de modèle
+    assert tracker.interpolate_ball_positions([{}, {}, {}]) == [{}, {}, {}]
+    partiel = tracker.interpolate_ball_positions([{}, {1: {"bbox": [0, 0, 2, 2]}}, {}])
+    assert all(f[1]["bbox"] == [0, 0, 2, 2] for f in partiel)

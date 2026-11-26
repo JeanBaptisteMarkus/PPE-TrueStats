@@ -6,9 +6,13 @@
 3. attribution des équipes / identités, possession, passes, interceptions ;
 4. détection des tirs ratés puis des rebonds ;
 5. export des frames de tir / rebond et de la vidéo annotée.
+
+Les résultats vont dans output_videos/<nom de la vidéo>/ et le cache des
+détections dans stubs/<nom de la vidéo>_<taille>/ : chaque vidéo a les siens.
 """
 import argparse
 import os
+from pathlib import Path
 
 import cv2
 
@@ -22,8 +26,13 @@ from .affichage import (
     TeamBallControlDrawer,
 )
 from .detection import BallTracker, BasketDetector, CourtKeypointDetector, PlayerTracker, TeamAssigner
-from .evenements import BallAcquisitionDetector, PassAndInterceptionDetector, ReboundDetector
-from .utils.video_utils import read_video, save_video
+from .evenements import (
+    BallAcquisitionDetector,
+    PassAndInterceptionDetector,
+    ReboundDetector,
+    centres_panier_par_frame,
+)
+from .utils.video_utils import lire_fps, read_video, save_video
 
 
 def stabilize_keypoints(keypoints_list, alpha=0.3):
@@ -75,8 +84,27 @@ def positions_ballon(ball_tracks):
     return ball_positions
 
 
-def detecter_tirs_et_rebonds(rebound_detector, ball_positions, possession_list, player_assignment, basket_center):
-    """Retourne (tentatives de tir, rebonds) par frame ; rebonds[t] = id de l'équipe ou False."""
+def dossiers_pour_video(input_video_path):
+    """(dossier de cache, dossier de sortie) propres à une vidéo.
+
+    Le cache est identifié par le nom ET la taille du fichier, pour ne jamais
+    relire les détections d'une autre vidéo portant le même nom.
+    """
+    chemin = Path(input_video_path)
+    taille = chemin.stat().st_size if chemin.exists() else 0
+    return config.DOSSIER_STUBS / f"{chemin.stem}_{taille}", config.DOSSIER_SORTIE / chemin.stem
+
+
+def nombre_evenements(evenements_par_frame):
+    """Nombre de frames où un événement (passe, interception) a eu lieu (-1 = aucun)."""
+    return sum(1 for e in evenements_par_frame if e != -1)
+
+
+def detecter_tirs_et_rebonds(rebound_detector, ball_positions, possession_list, player_assignment, basket_centers):
+    """Retourne (tentatives de tir, rebonds) par frame ; rebonds[t] = id de l'équipe ou False.
+
+    basket_centers[t] : centre du panier à la frame t (None si inconnu).
+    """
     n = len(ball_positions)
     shot_attempts = [False] * n
     made_shots = [False] * n
@@ -87,8 +115,10 @@ def detecter_tirs_et_rebonds(rebound_detector, ball_positions, possession_list, 
         if ball_positions[t][0] is None:
             continue
         shot_attempts[t] = rebound_detector.detect_shot_attempt(ball_positions, possession_list, t)
-        made_shots[t] = rebound_detector.detect_made_shot(ball_positions, basket_center, t)
-        missed_shots[t] = rebound_detector.detect_missed_shot(ball_positions, basket_center, t)
+        if basket_centers[t] is None:
+            continue
+        made_shots[t] = rebound_detector.detect_made_shot(ball_positions, basket_centers[t], t)
+        missed_shots[t] = rebound_detector.detect_missed_shot(ball_positions, basket_centers[t], t)
 
     for t in range(n):
         if ball_positions[t][0] is None:
@@ -104,15 +134,18 @@ def detecter_tirs_et_rebonds(rebound_detector, ball_positions, possession_list, 
 
 
 def enregistrer_frames(video_frames, indices, dossier, prefixe):
-    """Enregistre les frames `indices` en JPEG dans `dossier`."""
+    """Enregistre les frames `indices` en JPEG dans `dossier` (en retirant celles d'une analyse précédente)."""
     os.makedirs(dossier, exist_ok=True)
+    for ancien in Path(dossier).glob(f"{prefixe}_*.jpg"):
+        ancien.unlink()
     for idx in indices:
         cv2.imwrite(os.path.join(dossier, f"{prefixe}_{idx:04d}.jpg"), video_frames[idx])
 
 
 def main(input_video_path=config.VIDEO_PAR_DEFAUT, utiliser_cache=True):
-    output_dir = str(config.DOSSIER_SORTIE)
-    stubs_dir = str(config.DOSSIER_STUBS)
+    dossier_stubs, dossier_sortie = dossiers_pour_video(input_video_path)
+    output_dir, stubs_dir = str(dossier_sortie), str(dossier_stubs)
+    output_video_path = os.path.join(output_dir, "output_video.avi")
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(stubs_dir, exist_ok=True)
 
@@ -121,6 +154,8 @@ def main(input_video_path=config.VIDEO_PAR_DEFAUT, utiliser_cache=True):
     if len(video_frames) == 0:
         print(f"Erreur : la vidéo n'a pas été chargée ({input_video_path}).")
         return
+    fps = lire_fps(str(input_video_path))
+    print(f"{len(video_frames)} frames à {fps:.2f} images/s")
 
     print("\nChargement des modèles...")
     player_tracker = PlayerTracker(model_path=str(config.MODELE_JOUEURS))
@@ -175,14 +210,13 @@ def main(input_video_path=config.VIDEO_PAR_DEFAUT, utiliser_cache=True):
 
     # --- Tirs et rebonds ---------------------------------------------------
     ball_positions = positions_ballon(ball_tracks)
-    if basket_detections and basket_detections[0]:
-        basket_center = basket_detections[0][0]["center"]
-    else:
-        basket_center = (0, 0)
+    basket_centers = centres_panier_par_frame(basket_detections, ball_positions)
+    if all(c is None for c in basket_centers):
+        print("⚠️ Aucun panier détecté dans la vidéo : tirs ratés et rebonds non détectables.")
 
     rebound_detector = ReboundDetector(basket_threshold=config.SEUIL_DISTANCE_PANIER)
     shot_attempts, rebounds = detecter_tirs_et_rebonds(
-        rebound_detector, ball_positions, ball_acquisition, player_assignment, basket_center)
+        rebound_detector, ball_positions, ball_acquisition, player_assignment, basket_centers)
 
     shot_dir = os.path.join(output_dir, "shot_frames")
     enregistrer_frames(video_frames, [i for i, shot in enumerate(shot_attempts) if shot], shot_dir, "shot_frame")
@@ -216,13 +250,13 @@ def main(input_video_path=config.VIDEO_PAR_DEFAUT, utiliser_cache=True):
     output_video_frames = ReboundDrawer().draw(output_video_frames, rebounds)
     output_video_frames = BasketDrawer().draw(output_video_frames, basket_detections)
 
-    save_video(output_video_frames, str(config.VIDEO_SORTIE))
+    save_video(output_video_frames, output_video_path, fps=fps)
 
     print("\n✅ TRAITEMENT TERMINÉ AVEC SUCCÈS")
-    print(f"📹 Vidéo: {config.VIDEO_SORTIE}")
+    print(f"📹 Vidéo: {output_video_path}")
     print(f"🎯 Keypoints détectés: {sum(len(kp) for kp in court_keypoints)}")
-    print(f"🔄 Passes: {len(passes)}")
-    print(f"🛑 Interceptions: {len(interceptions)}")
+    print(f"🔄 Passes: {nombre_evenements(passes)}")
+    print(f"🛑 Interceptions: {nombre_evenements(interceptions)}")
     print(f"🏀 Frames de rebond détectées : {rebound_frames}")
 
 

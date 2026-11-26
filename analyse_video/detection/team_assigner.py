@@ -36,7 +36,7 @@ class TeamAssigner:
     
     def get_player_teams_across_frames(self, video_frames, player_tracks, read_from_stub=False, stub_path=None):
         player_assignment = read_stub(read_from_stub, stub_path)
-        if player_assignment is not None:
+        if player_assignment is not None and len(player_assignment) == len(video_frames):
             return player_assignment
         
         print("\n🔒 ASSIGNATION DES ÉQUIPES PAR MOYENNE DE CONFIANCE")

@@ -71,7 +71,18 @@ python -m analyse_video                         # analyse_video/input_videos/vid
 python -m analyse_video path/to/video.mp4 --sans-cache
 ```
 
-Player/ball tracks and team assignments are cached in `analyse_video/stubs/`. Use `--sans-cache` when you change video. Results go to `analyse_video/output_videos/`: an annotated video, plus the shot and rebound frames.
+Any video can be given as input. Each video gets its own folders:
+- `analyse_video/output_videos/<video name>/`: the annotated video (same frame rate as the source), plus the shot and rebound frames;
+- `analyse_video/stubs/<video name>_<file size>/`: cached player/ball tracks and team assignments, reused on the next run of the same video. Use `--sans-cache` to recompute them.
+
+The basket position is detected on every frame (the camera can move). When several baskets are visible, the one closest to the ball is used. If no basket is detected in the whole video, shots and rebounds are not detected and a warning is printed.
+
+#### Current limitations on arbitrary videos
+
+- **Teams and player names**: `team.pt` and `JoueurEquipe.pt` were trained on a Celtics vs Bucks game. On other teams, team assignment and player identification will be wrong. Clustering jersey colors would make team assignment independent of the teams.
+- **Missed shot rule**: any frame where the ball is more than 150 px from the basket counts as a "missed shot", even when nobody shot. The detected rebounds are therefore not reliable yet.
+- **Pixel and frame thresholds** (possession distance 50 px, 13 frames to confirm possession, basket radius 50 px…) are fixed. They do not adapt to the resolution, zoom or frame rate of the video.
+- **Memory**: the whole video is loaded in RAM (about 2.7 MB per 720p frame), so long videos should be cut into clips.
 
 The videos, datasets and caches from the original work are still available on the `dev_analyse_vidéo` branch (they were not copied to `main`: ~600 MB).
 

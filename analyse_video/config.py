@@ -7,9 +7,8 @@ RACINE_PROJET = DOSSIER_ANALYSE.parent
 # --- Entrées / sorties (non versionnées, voir .gitignore) -------------------
 DOSSIER_VIDEOS = DOSSIER_ANALYSE / "input_videos"
 VIDEO_PAR_DEFAUT = DOSSIER_VIDEOS / "video9.mp4"
-DOSSIER_SORTIE = DOSSIER_ANALYSE / "output_videos"
-VIDEO_SORTIE = DOSSIER_SORTIE / "output_video.avi"
-DOSSIER_STUBS = DOSSIER_ANALYSE / "stubs"  # cache pickle des détections
+DOSSIER_SORTIE = DOSSIER_ANALYSE / "output_videos"  # un sous-dossier par vidéo analysée
+DOSSIER_STUBS = DOSSIER_ANALYSE / "stubs"  # cache pickle des détections, un sous-dossier par vidéo
 
 # --- Modèles YOLO (voir models/README.md) -----------------------------------
 DOSSIER_MODELES = DOSSIER_ANALYSE / "models"

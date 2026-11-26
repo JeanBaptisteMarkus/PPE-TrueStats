@@ -1,4 +1,37 @@
+import bisect
+
 import numpy as np
+
+
+def centres_panier_par_frame(basket_detections, ball_positions):
+    """Centre du panier visé à chaque frame, pour une vidéo quelconque (caméra mobile).
+
+    - plusieurs paniers détectés : on garde le plus proche du ballon ;
+    - frame sans détection : centre détecté à la frame la plus proche dans le temps ;
+    - aucun panier dans toute la vidéo : None pour chaque frame.
+    """
+    n = len(ball_positions)
+    centres = [None] * n
+    for t, detections in enumerate(basket_detections[:n]):
+        if not detections:
+            continue
+        bx, by = ball_positions[t]
+        if bx is None:
+            choisi = detections[0]
+        else:
+            choisi = min(detections, key=lambda d: (d["center"][0] - bx) ** 2 + (d["center"][1] - by) ** 2)
+        centres[t] = tuple(choisi["center"])
+
+    connues = [t for t, c in enumerate(centres) if c is not None]
+    if not connues:
+        return centres
+    for t in range(n):
+        if centres[t] is None:
+            i = bisect.bisect_left(connues, t)
+            voisines = [connues[j] for j in (i - 1, i) if 0 <= j < len(connues)]
+            centres[t] = centres[min(voisines, key=lambda k: abs(k - t))]
+    return centres
+
 
 class ReboundDetector:
     def __init__(self, basket_threshold=50):
