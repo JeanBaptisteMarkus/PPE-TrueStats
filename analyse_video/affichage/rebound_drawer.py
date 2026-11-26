@@ -25,9 +25,6 @@ class ReboundDrawer:
         formatted_rebounds = [r if type(r) == int else 0 for r in rebounds]
 
         for frame_num, frame in enumerate(video_frames):
-            if frame_num == 0:
-                continue
-            
             frame_drawn = self.draw_frame(frame, frame_num, formatted_rebounds)
             output_video_frames.append(frame_drawn)
         return output_video_frames

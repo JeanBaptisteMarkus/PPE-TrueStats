@@ -71,7 +71,7 @@ class TeamAssigner:
                         if dist < best_dist:
                             best_dist, best_tid = dist, tid
                     
-                    if best_tid and best_dist < 50:
+                    if best_tid is not None and best_dist < 50:
                         track_votes[best_tid][team] += confidence
                         track_counts[best_tid][team] += 1
         
@@ -123,7 +123,7 @@ class TeamAssigner:
                         if dist < best_dist:
                             best_dist, best_tid = dist, tid
                     
-                    if best_tid and best_tid not in self.player_identity_map and best_dist < 70:
+                    if best_tid is not None and best_tid not in self.player_identity_map and best_dist < 70:
                         roi = frame[y1:y2, x1:x2]
                         if roi.size > 0:
                             r = self.player_model(roi, verbose=False)
