@@ -4,7 +4,7 @@
 1. détection des repères du terrain et des paniers ;
 2. suivi des joueurs et du ballon ;
 3. attribution des équipes / identités, possession, passes, interceptions ;
-4. détection des tirs ratés puis des rebonds ;
+4. détection des tirs (réussis / ratés) puis des rebonds offensifs / défensifs ;
 5. export des frames de tir / rebond et de la vidéo annotée.
 
 Les résultats vont dans output_videos/<nom de la vidéo>/ et le cache des
@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 from . import config
 from .affichage import (
@@ -27,12 +28,7 @@ from .affichage import (
 )
 from .detection import BallTracker, BasketDetector, CourtKeypointDetector, PlayerTracker, TeamAssigner
 from .equipes import EquipesParCouleur
-from .evenements import (
-    BallAcquisitionDetector,
-    PassAndInterceptionDetector,
-    ReboundDetector,
-    centres_panier_par_frame,
-)
+from .evenements import BallAcquisitionDetector, DetecteurTirs, PassAndInterceptionDetector, paniers_par_frame
 from .utils.video_utils import lire_fps, read_video, save_video
 
 
@@ -101,37 +97,10 @@ def nombre_evenements(evenements_par_frame):
     return sum(1 for e in evenements_par_frame if e != -1)
 
 
-def detecter_tirs_et_rebonds(rebound_detector, ball_positions, possession_list, player_assignment, basket_centers):
-    """Retourne (tentatives de tir, rebonds) par frame ; rebonds[t] = id de l'équipe ou False.
-
-    basket_centers[t] : centre du panier à la frame t (None si inconnu).
-    """
-    n = len(ball_positions)
-    shot_attempts = [False] * n
-    made_shots = [False] * n
-    missed_shots = [False] * n
-    rebounds = [False] * n
-
-    for t in range(n):
-        if ball_positions[t][0] is None:
-            continue
-        shot_attempts[t] = rebound_detector.detect_shot_attempt(ball_positions, possession_list, t)
-        if basket_centers[t] is None:
-            continue
-        made_shots[t] = rebound_detector.detect_made_shot(ball_positions, basket_centers[t], t)
-        missed_shots[t] = rebound_detector.detect_missed_shot(ball_positions, basket_centers[t], t)
-
-    for t in range(n):
-        if ball_positions[t][0] is None:
-            continue
-        if rebound_detector.detect_rebound(missed_shots, ball_positions, possession_list, t):
-            current_holder = possession_list[t]
-            team_id = player_assignment[t].get(current_holder, -1)
-            if team_id != -1:
-                rebounds[t] = team_id
-                print(f"  🏀 Rebond frame {t}: équipe {team_id}")
-
-    return shot_attempts, rebounds
+def diametre_ballon(ball_tracks):
+    """Diamètre médian du ballon en pixels (0 si jamais détecté)."""
+    largeurs = [f[1]["bbox"][2] - f[1]["bbox"][0] for f in ball_tracks if f.get(1, {}).get("bbox")]
+    return float(np.median(largeurs)) if largeurs else 0.0
 
 
 def enregistrer_frames(video_frames, indices, dossier, prefixe):
@@ -227,35 +196,43 @@ def main(input_video_path=config.VIDEO_PAR_DEFAUT, utiliser_cache=True, attribut
 
     # --- Tirs et rebonds ---------------------------------------------------
     ball_positions = positions_ballon(ball_tracks)
-    basket_centers = centres_panier_par_frame(basket_detections, ball_positions)
-    if all(c is None for c in basket_centers):
-        print("⚠️ Aucun panier détecté dans la vidéo : tirs ratés et rebonds non détectables.")
+    paniers = paniers_par_frame(basket_detections, ball_positions)
+    if all(p is None for p in paniers):
+        print("⚠️ Aucun panier détecté dans la vidéo : tirs et rebonds non détectables.")
 
-    rebound_detector = ReboundDetector(basket_threshold=config.SEUIL_DISTANCE_PANIER)
-    shot_attempts, rebounds = detecter_tirs_et_rebonds(
-        rebound_detector, ball_positions, ball_acquisition, player_assignment, basket_centers)
+    detecteur = DetecteurTirs(fps, diametre_ballon(ball_tracks))
+    tirs, rebonds = detecteur.detecter(ball_positions, ball_acquisition, paniers, player_assignment)
+
+    def nom(equipe):
+        return noms_equipes[equipe - 1] if equipe in (1, 2) else "équipe inconnue"
+
+    for tir in tirs:
+        tireur = f"joueur {tir.tireur} ({nom(tir.equipe)})" if tir.tireur is not None else "tireur inconnu"
+        print(f"  🎯 Tir frame {tir.depart} par {tireur} : {'réussi' if tir.reussi else 'raté'}")
+    for rebond in rebonds:
+        genre = {True: "offensif", False: "défensif", None: "type inconnu"}[rebond.offensif]
+        print(f"  🏀 Rebond frame {rebond.frame} : joueur {rebond.joueur} ({nom(rebond.equipe)}), {genre}")
 
     shot_dir = os.path.join(output_dir, "shot_frames")
-    enregistrer_frames(video_frames, [i for i, shot in enumerate(shot_attempts) if shot], shot_dir, "shot_frame")
+    enregistrer_frames(video_frames, [tir.depart for tir in tirs], shot_dir, "shot_frame")
     print(f"Frames de tir enregistrées dans : {shot_dir}")
 
-    # Un seul rebond par séquence (frames distantes de plus de 2)
-    rebound_frames = []
-    rebound_teams = []
-    for i, reb in enumerate(rebounds):
-        if reb:
-            if not rebound_frames or i - rebound_frames[-1] > 2:
-                rebound_frames.append(i)
-                rebound_teams.append(reb)
-
+    rebound_frames = [rebond.frame for rebond in rebonds]
     rebound_dir = os.path.join(output_dir, "rebound_frames")
     enregistrer_frames(video_frames, rebound_frames, rebound_dir, "rebound_frame")
     print(f"Frames de rebond enregistrées dans : {rebound_dir}")
 
-    if rebound_teams:
-        rebonds_1 = sum(1 for t in rebound_teams if t == 1)
-        rebonds_2 = sum(1 for t in rebound_teams if t == 2)
-        print(f"📊 Rebonds détectés: {noms_equipes[0]}: {rebonds_1}, {noms_equipes[1]}: {rebonds_2}")
+    reussis = sum(tir.reussi for tir in tirs)
+    print(f"📊 Tirs : {len(tirs)} (réussis : {reussis}, ratés : {len(tirs) - reussis})")
+    if rebonds:
+        par_equipe = [sum(1 for r in rebonds if r.equipe == e) for e in (1, 2)]
+        print(f"📊 Rebonds : {noms_equipes[0]}: {par_equipe[0]}, {noms_equipes[1]}: {par_equipe[1]}")
+
+    # Pour l'affichage : équipe du rebondeur à la frame du rebond
+    rebounds = [False] * len(video_frames)
+    for rebond in rebonds:
+        if rebond.equipe in (1, 2):
+            rebounds[rebond.frame] = rebond.equipe
 
     # --- Vidéo annotée -------------------------------------------------------
     output_video_frames = video_frames.copy()

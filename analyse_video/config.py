@@ -24,4 +24,4 @@ FICHIER_JOUEURS = RACINE_PROJET / "data" / "joueurs_celtics_bucks.csv"
 
 # --- Paramètres de détection ------------------------------------------------
 SEUIL_CONFIANCE_TERRAIN = 0.2
-SEUIL_DISTANCE_PANIER = 50  # pixels : balle considérée « au panier »
+# Les seuils des tirs et rebonds (durées, marges) sont dans evenements/tirs.py

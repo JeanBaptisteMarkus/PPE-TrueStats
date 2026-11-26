@@ -4,4 +4,5 @@ Ce sous-package ne dépend que de numpy (pas de YOLO ni d'OpenCV).
 """
 from .ball_acquisition_detector import BallAcquisitionDetector
 from .pass_and_interception_detector import PassAndInterceptionDetector
-from .rebound_detector import ReboundDetector, centres_panier_par_frame
+from .panier import paniers_par_frame
+from .tirs import DetecteurTirs, Rebond, Tir

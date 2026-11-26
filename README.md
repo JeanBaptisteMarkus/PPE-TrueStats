@@ -81,13 +81,22 @@ Players are split into two teams by **jersey color**, computed again for every v
 
 The basket position is detected on every frame (the camera can move). When several baskets are visible, the one closest to the ball is used. If no basket is detected in the whole video, shots and rebounds are not detected and a warning is printed.
 
+**Shots and rebounds** (`analyse_video/evenements/tirs.py`):
+1. the ball leaves a player, or is already in the air when the video starts;
+2. without anyone catching it, the ball goes higher than the basket area, then enters it within 3 s. A pass is caught before, or does not go up;
+3. the shot is made if the ball leaves the basket area through the bottom, in its middle (through the rim). Otherwise it is missed;
+4. the rebound is the first player to gain possession after a missed shot, within 5 s. It is offensive if the rebounder is on the shooter's team, defensive otherwise.
+
+The basket area is the detected basket box, widened by a margin proportional to its size plus one ball diameter. Durations are in seconds and converted with the video frame rate. On `video9.mp4` the rule finds the actual play: a missed shot by Milwaukee (frame 73) and a defensive rebound by Boston (frame 220).
+
 #### Current limitations on arbitrary videos
 
 - **Similar jerseys**: if both teams wear similar colors, they cannot be told apart by color; a warning is printed.
 - **Referees** are left out by the player detector, which only keeps the "Player" class. A referee who still got through would be put in the team with the closest jersey color.
 - **Player identity** (needed for height and rebound stats) is not known in color mode: it would require reading jersey numbers. Only `--attribution modele` names players, and only for the Celtics vs Bucks game.
-- **Missed shot rule**: any frame where the ball is more than 150 px from the basket counts as a "missed shot", even when nobody shot. The detected rebounds are therefore not reliable yet.
-- **Pixel and frame thresholds** (possession distance 50 px, 13 frames to confirm possession, basket radius 50 px…) are fixed. They do not adapt to the resolution, zoom or frame rate of the video.
+- **2D view**: a ball passing in front of or behind the rim can be judged wrongly, and an air ball that never gets near the basket is not counted as a shot.
+- **Possession and tracking**: the shooter and the rebounder come from the possession detector. A ball flying close to a defender can be taken as his possession, and when the tracker swaps two players' IDs, the team of that track is wrong for part of the video.
+- **Possession thresholds** (distance 50 px, 13 frames to confirm a possession) are still fixed in pixels and frames. They do not adapt to the resolution, zoom or frame rate of the video.
 - **Memory**: the whole video is loaded in RAM (about 2.7 MB per 720p frame), so long videos should be cut into clips.
 
 The videos, datasets and caches from the original work are still available on the `dev_analyse_vidéo` branch (they were not copied to `main`: ~600 MB).
