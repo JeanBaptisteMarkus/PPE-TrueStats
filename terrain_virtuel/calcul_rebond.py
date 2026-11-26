@@ -47,10 +47,20 @@ def valeur_rebond_defensif(
         if diff > 0:
             difficulty += diff * 0.002
 
+    for adv in Taille_adversaires_2m:
+        diff = adv - TailleRebondeur
+        if diff > 0:
+            difficulty += diff * 0.001
+
     for adv in Moyenne_Reb_adv_1m:
         diff = adv - Moyenne_Rebond_rebondeur
         if diff > 0:
             difficulty += diff * 0.015
+
+    for adv in Moyenne_Reb_adv_2m:
+        diff = adv - Moyenne_Rebond_rebondeur
+        if diff > 0:
+            difficulty += diff * 0.008
 
     # -------------------
     # FACILITÉ

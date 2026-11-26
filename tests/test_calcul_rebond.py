@@ -50,3 +50,10 @@ def test_adversaires_plus_grands_augmentent_la_difficulte():
     petit = valeur_rebond_defensif(**params(Taille_adversaires_1m=[190], Moyenne_Reb_adv_1m=[6.0]))
     grand = valeur_rebond_defensif(**params(Taille_adversaires_1m=[215], Moyenne_Reb_adv_1m=[6.0]))
     assert grand > petit
+
+
+@pytest.mark.parametrize("calcul", [valeur_rebond_defensif, valeur_rebond_offensif])
+def test_adversaire_entre_1_et_2m_plus_fort_augmente_la_difficulte(calcul):
+    egal = calcul(**params(Taille_adversaires_2m=[200], Moyenne_Reb_adv_2m=[6.0]))
+    plus_fort = calcul(**params(Taille_adversaires_2m=[215], Moyenne_Reb_adv_2m=[10.0]))
+    assert plus_fort > egal
