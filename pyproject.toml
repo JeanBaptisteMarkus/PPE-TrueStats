@@ -1,0 +1,10 @@
+[project]
+name = "truestats"
+version = "0.2.0"
+description = "Analyse et valeur des rebonds au basket : terrain virtuel et analyse vidéo (PPE ECE ING4)"
+readme = "README.md"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

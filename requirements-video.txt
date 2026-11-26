@@ -1,0 +1,7 @@
+# Analyse vidéo (en plus de requirements.txt)
+-r requirements.txt
+ultralytics     # YOLO (installe PyTorch)
+supervision     # suivi ByteTrack
+opencv-python
+pyyaml          # entrainement/entrainer_identification_joueurs.py
+roboflow        # téléchargement des datasets dans entrainement/notebooks

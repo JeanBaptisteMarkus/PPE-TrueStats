@@ -2,72 +2,104 @@
 
 ## Overview
 
-This project aims to analyze and evaluate basketball rebounds using data-driven methods. The main objective is to develop an algorithm capable of estimating the probability of a player winning a rebound based on several parameters, such as player positions, distances, and their relative locations on the court.
+This project (PPE, ECE ING4) analyzes and evaluates basketball rebounds using data-driven methods. The main objective is an algorithm that rates how hard a rebound was to win, based on player positions, distances, heights, rebounding stats and game context.
 
-The project combines two main components:
-- **Virtual Court Simulation:** A virtual basketball court where players can be manually positioned to create different rebound scenarios.
-- **Rebound Calculation Algorithm:** An algorithm that evaluates rebound situations and estimates which player is most likely to secure the rebound.
+The project has two components:
+- **Virtual court + rebound value algorithm** (`terrain_virtuel/`): players are positioned by hand on a virtual half court, the user picks the rebounder, and the algorithm computes a rebound value between 0.7 (easy) and 1.3 (heavily contested). This part is functional.
+- **Video analysis** (`analyse_video/`): a YOLO-based pipeline that detects players, ball, court and basket in real footage, tracks possession, and detects shots and rebounds. This part is **in development**: positions are still in image pixels and are not yet converted to court meters, so its output is not yet fed into the rebound algorithm.
 
-A Computer Vision component is also being developed to automatically detect players and extract their positions from real basketball footage. The long-term goal is to combine real-world data extraction with the rebound calculation algorithm.
+## Project structure
 
-## Current Project Status
+```
+PPE-TrueStats/
+├── terrain_virtuel/          Virtual court (python -m terrain_virtuel)
+│   ├── config.py             Court dimensions, basket position, radii, file paths
+│   ├── joueurs.py            Joueur class, NBA teams, CSV loading
+│   ├── situation.py          Geometry of a rebound situation (nearby opponents, ratio, distance)
+│   ├── calcul_rebond.py      Rebound value algorithm (offensive / defensive)
+│   ├── export.py             Excel export (one row per situation)
+│   └── interface/            GUI: context window (tkinter), court drawing, drag & drop,
+│                             substitutions, "Valider" button (matplotlib)
+├── analyse_video/            Video pipeline (python -m analyse_video)
+│   ├── config.py             Paths to models, videos, caches
+│   ├── detection/            YOLO perception: players, ball, court keypoints, basket, teams
+│   ├── evenements/           Game logic (numpy only): possession, passes, interceptions, rebounds
+│   ├── affichage/            OpenCV drawing of the annotated output video
+│   ├── utils/                Bounding boxes, video I/O, pickle caches
+│   └── models/               YOLO weights (*.pt, not versioned, see models/README.md)
+├── entrainement/             YOLO training scripts and notebooks
+├── experimentations/         Earlier prototypes (sigmoid formula, random forest)
+├── data/
+│   ├── joueurs_nba.csv           300 NBA players (ID, team, name, height cm, rebounds/game)
+│   └── joueurs_celtics_bucks.csv 18 players used by the video identification model
+├── tests/                    pytest suite
+├── requirements.txt          Virtual court dependencies
+└── requirements-video.txt    Video analysis dependencies (YOLO, OpenCV…)
+```
 
-<ins>**The Computer Vision component is not yet fully implemented.**</ins>
+## Installation
 
-At this stage, the project does not provide a complete automated analysis of basketball footage. However, the rebound calculation algorithm is already functional and can be tested using manually created virtual situations.
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt            # virtual court only
+pip install -r requirements-video.txt      # + video analysis
+```
 
-Users can:
-- Select the players involved in a rebound situation.
-- Manually position players on the virtual basketball court.
-- Create different hypothetical rebound scenarios.
-- Run the algorithm to evaluate the situation and obtain rebound predictions.
+tkinter ships with Python; on Debian/Ubuntu install it with `sudo apt install python3-tk`.
 
-This makes it possible to test and evaluate the algorithm independently of the Computer Vision component.
+## Usage
 
-## Main Features
+### Virtual court
 
-### 1. Virtual Basketball Court
+```bash
+python -m terrain_virtuel
+```
 
-The project includes a virtual representation of a basketball court, allowing users to create custom situations.
+1. Choose both teams, the score and the remaining time (empty fields get random values).
+2. Drag players on the court; click a player then a name in the right panel to substitute.
+3. Select the rebounder, tick **Rebond Offensif** if needed, then click **Valider**.
 
-Players can be manually placed on the court, making it possible to reproduce different game situations and study how player positioning affects rebound outcomes.
+The rebound value is printed in the terminal and the situation is appended to `output/donnees_rebonds.xlsx`.
 
-### 2. Rebound Calculation Algorithm
+### Video analysis
 
-The core of the project is an algorithm designed to estimate the probability of a player securing a rebound.
+Put the YOLO weights in `analyse_video/models/` (see [its README](analyse_video/models/README.md)) and a video in `analyse_video/input_videos/`, then:
 
-It takes into account several parameters related to the players' positions and their spatial relationships to the rebound situation.
+```bash
+python -m analyse_video                         # analyse_video/input_videos/video9.mp4
+python -m analyse_video path/to/video.mp4 --sans-cache
+```
 
-The algorithm can be executed on virtual scenarios, allowing users to compare different configurations and observe how changes in player positioning influence the results.
+Player/ball tracks and team assignments are cached in `analyse_video/stubs/`. Use `--sans-cache` when you change video. Results go to `analyse_video/output_videos/`: an annotated video, plus the shot and rebound frames.
 
-### 3. Computer Vision (In Development)
+The videos, datasets and caches from the original work are still available on the `dev_analyse_vidéo` branch (they were not copied to `main`: ~600 MB).
 
-An additional objective is to implement a Computer Vision system capable of analyzing basketball videos.
+### Experiments
 
-The intended functionality includes:
-- Detecting players in video footage.
-- Identifying and tracking players across frames.
-- Extracting player positions on the basketball court.
-- Using these positions as inputs for the rebound calculation algorithm.
+```bash
+python experimentations/version_initiale_terrain.py   # first prototype (sigmoid formula)
+python experimentations/random_forest_rebond.py       # random forest on synthetic data
+```
 
-This component is still under development and is not yet fully operational.
+### Tests
 
-## Project Objectives
+```bash
+pytest
+```
 
-The long-term objective is to combine the different components into a single system capable of analyzing real basketball situations.
+## How the rebound value works
 
-The expected workflow is:
+For the selected rebounder, `terrain_virtuel/situation.py` computes:
+- opponents within 1 m, and opponents between 1 m and 2 m (their heights and rebound averages);
+- the opponents / teammates ratio within 3 m;
+- the distance between the rebounder and the basket;
+- the score difference (from the rebounder's team point of view) and the remaining time.
 
-1. Input a basketball video.
-2. Detect and track the players using Computer Vision.
-3. Extract their positions on the court.
-4. Identify rebound situations.
-5. Feed the extracted data into the rebound calculation algorithm.
-6. Evaluate and predict the most likely rebound outcome.
+`terrain_virtuel/calcul_rebond.py` then sums **difficulty** terms (close, taller or better opponents) and **ease** terms (nobody around, height or stats advantage, long rebound, numerical superiority), adds a **clutch** bonus for close games in the last minute, and clamps the result to [0.7, 1.3]. Offensive rebounds carry an extra structural difficulty (+0.07) and weigh opponents between 1 m and 2 m more heavily.
 
+## Roadmap
 
-## Conclusion
-
-Although the Computer Vision component is not yet complete, the project already provides a functional foundation for basketball rebound analysis.
-
-The virtual court and rebound calculation algorithm can be used independently to simulate and evaluate different situations. The next major step is to connect this existing functionality to real-world basketball footage, ultimately creating a more complete and automated rebound analysis tool.
+1. Map image coordinates to court meters, using a homography from the detected court keypoints.
+2. At each detected rebound, build the situation (players' positions in meters) automatically.
+3. Feed it to the rebound value algorithm, so a real game can be rated from its video alone.

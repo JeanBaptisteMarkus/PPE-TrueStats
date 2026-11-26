@@ -1,0 +1,8 @@
+# Terrain virtuel, calcul du rebond et expérimentations
+numpy
+pandas
+matplotlib
+openpyxl        # lecture / écriture Excel (donnees_rebonds.xlsx)
+scikit-learn    # experimentations/random_forest_rebond.py
+pytest
+# tkinter est fourni avec Python (paquet système python3-tk sous Debian/Ubuntu)
