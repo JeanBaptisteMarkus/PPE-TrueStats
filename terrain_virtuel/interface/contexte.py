@@ -7,6 +7,15 @@ from tkinter import ttk
 from ..joueurs import EQUIPES_NBA
 
 
+def completer_equipes(choix1, choix2, rng=random):
+    """Tire au hasard les équipes non choisies, sans jamais prendre deux fois la même."""
+    if not choix1:
+        choix1 = rng.choice([e for e in EQUIPES_NBA if e != choix2])
+    if not choix2:
+        choix2 = rng.choice([e for e in EQUIPES_NBA if e != choix1])
+    return choix1, choix2
+
+
 def choix_contexte_tkinter():
     """Affiche le menu de choix du contexte du match.
 
@@ -74,14 +83,8 @@ def choix_contexte_tkinter():
         nonlocal equipe1, equipe2, score_equipe1, score_equipe2, temps_restant
 
         # Récupérer les valeurs ou utiliser des valeurs aléatoires
-        equipe1_choix = menu_deroulant1.get()
-        if not equipe1_choix:
-            equipe1_choix = random.choice(list(EQUIPES_NBA.keys()))
+        equipe1_choix, equipe2_choix = completer_equipes(menu_deroulant1.get(), menu_deroulant2.get())
         equipe1 = EQUIPES_NBA[equipe1_choix]
-
-        equipe2_choix = menu_deroulant2.get()
-        if not equipe2_choix:
-            equipe2_choix = random.choice(list(EQUIPES_NBA.keys()))
         equipe2 = EQUIPES_NBA[equipe2_choix]
 
         try:

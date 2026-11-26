@@ -64,7 +64,7 @@ def analyser_situation(rebondeur, coequipiers, adversaires, score_equipe, score_
         d = distance(rebondeur, adv)
         if d <= RAYON_ADVERSAIRES_1M:
             adversaires_1m.append(adv)
-        if RAYON_ADVERSAIRES_1M <= d <= RAYON_ADVERSAIRES_2M:
+        elif d <= RAYON_ADVERSAIRES_2M:
             adversaires_2m.append(adv)
 
     # Ratio adversaires / coéquipiers dans un rayon de 3 m

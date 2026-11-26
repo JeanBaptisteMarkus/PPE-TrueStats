@@ -54,3 +54,12 @@ def test_ligne_export(scene, tmp_path):
     ajouter_ligne_excel(ligne, fichier)
     import pandas as pd
     assert len(pd.read_excel(fichier)) == 2
+
+
+def test_adversaire_a_exactement_1m_compte_une_seule_fois():
+    rebondeur = joueur("reb", 5.0, 5.0)
+    a_1m = joueur("a1", 6.0, 5.0, equipe="LAL")
+    a_2m = joueur("a2", 5.0, 7.0, equipe="LAL")
+    s = analyser_situation(rebondeur, [rebondeur], [a_1m, a_2m], 80, 80, 600, offensif=False)
+    assert [a.id for a in s.adversaires_1m] == ["a1"]
+    assert [a.id for a in s.adversaires_2m] == ["a2"]
